@@ -11,15 +11,30 @@ class Database:
 
 db = Database()
 
+def validate_mongodb_url(url: str) -> str:
+    """Validate and fix MongoDB URL if needed."""
+    if not url:
+        print("ERROR: No MongoDB URL provided")
+        return "mongodb+srv://bu22-2130:bu22-2130@cluster0.4nsgp2g.mongodb.net/babcock_smart_campus?retryWrites=true&w=majority&appName=Cluster0&ssl=true&tlsAllowInvalidCertificates=true"
+    
+    if not (url.startswith("mongodb://") or url.startswith("mongodb+srv://")):
+        print(f"ERROR: Invalid MongoDB URL scheme: {url[:50]}...")
+        return "mongodb+srv://bu22-2130:bu22-2130@cluster0.4nsgp2g.mongodb.net/babcock_smart_campus?retryWrites=true&w=majority&appName=Cluster0&ssl=true&tlsAllowInvalidCertificates=true"
+    
+    return url
+
 async def connect_to_mongo():
-    """Create database connection - compatible with Motor 3.1.1."""
+    """Create database connection with URL validation."""
     try:
+        # Validate the MongoDB URL
+        mongodb_url = validate_mongodb_url(settings.MONGODB_URL)
+        
         logger.info("Attempting MongoDB connection...")
+        print(f"Using MongoDB URL: {mongodb_url.split('@')[0]}@{mongodb_url.split('@')[1].split('?')[0]}...")
         
         # Simple connection - let the connection string handle all SSL settings
-        # No SSL parameters in the client constructor for compatibility
         db.client = AsyncIOMotorClient(
-            settings.MONGODB_URL,
+            mongodb_url,
             serverSelectionTimeoutMS=30000,
             connectTimeoutMS=30000,
             maxPoolSize=50
@@ -29,9 +44,10 @@ async def connect_to_mongo():
         await db.client.admin.command('ping')
         logger.info("MongoDB connection successful")
         
-        # Set database using your settings
-        db.database = db.client[settings.MONGODB_DATABASE]
-        logger.info(f"Connected to database: {settings.MONGODB_DATABASE}")
+        # Set database
+        database_name = settings.MONGODB_DATABASE or "babcock_smart_campus"
+        db.database = db.client[database_name]
+        logger.info(f"Connected to database: {database_name}")
         print("Connected to MongoDB.")
         
     except (ServerSelectionTimeoutError, ConnectionFailure) as e:
