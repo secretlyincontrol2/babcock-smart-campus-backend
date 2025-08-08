@@ -15,6 +15,7 @@ MONGODB_URL=mongodb+srv://bu22-2130:bu22-2130@cluster0.4nsgp2g.mongodb.net/?retr
 MONGODB_DATABASE=smart_campus_db
 SECRET_KEY=smart-campus-app-secret-key-2024-babcock-university
 GOOGLE_MAPS_API_KEY=AIzaSyAa-XKO4DH_CLf647SMZYypDOfk0d1SBUE
+ALLOWED_ORIGINS=https://babcock-smart-campus-frontend.onrender.com
 ```
 
 ### **Step 3: Verify Build Settings**
