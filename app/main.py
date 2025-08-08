@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from contextlib import asynccontextmanager
 from fastapi.responses import JSONResponse
+from fastapi.responses import Response
 
 from .core.config import settings
 from .database import connect_to_mongo, close_mongo_connection
