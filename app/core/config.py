@@ -3,8 +3,8 @@ from typing import Optional
 
 class Settings:
     def __init__(self):
-        # MongoDB Database - Fixed URL with database name and SSL parameters
-        default_mongodb_url = "mongodb+srv://bu22-2130:bu22-2130@cluster0.4nsgp2g.mongodb.net/smart_campus_db?retryWrites=true&w=majority&appName=Cluster0&ssl=true&tlsAllowInvalidCertificates=true"
+        # MongoDB Database - Updated with correct cluster hostname
+        default_mongodb_url = "mongodb+srv://bu22-2130:bu22-2130@ac-uyow51n-shard-00-00.4nsgp2g.mongodb.net/smart_campus_db?retryWrites=true&w=majority&appName=Cluster0&tls=true&tlsAllowInvalidCertificates=true"
         self.MONGODB_URL: str = os.getenv("MONGODB_URL", default_mongodb_url)
         self.MONGODB_DATABASE: str = os.getenv("MONGODB_DATABASE", "smart_campus_db")
         
@@ -52,9 +52,17 @@ class Settings:
         # Check if URL is valid
         if not (self.MONGODB_URL.startswith("mongodb://") or self.MONGODB_URL.startswith("mongodb+srv://")):
             print(f"ERROR: Invalid MongoDB URL scheme. Current URL: {self.MONGODB_URL[:50]}...")
-            # Use fallback URL
-            self.MONGODB_URL = "mongodb+srv://bu22-2130:bu22-2130@cluster0.4nsgp2g.mongodb.net/smart_campus_db?retryWrites=true&w=majority&appName=Cluster0&ssl=true&tlsAllowInvalidCertificates=true"
+            # Use fallback URL with correct hostname
+            self.MONGODB_URL = "mongodb+srv://bu22-2130:bu22-2130@ac-uyow51n-shard-00-00.4nsgp2g.mongodb.net/smart_campus_db?retryWrites=true&w=majority&appName=Cluster0&tls=true&tlsAllowInvalidCertificates=true"
             print("Using fallback MongoDB URL")
+        
+        # Fix cluster hostname if using old format
+        if "cluster0.4nsgp2g.mongodb.net" in self.MONGODB_URL:
+            self.MONGODB_URL = self.MONGODB_URL.replace(
+                "cluster0.4nsgp2g.mongodb.net", 
+                "ac-uyow51n-shard-00-00.4nsgp2g.mongodb.net"
+            )
+            print("Updated cluster hostname to correct format")
         
         # Check if URL includes database name
         if "mongodb+srv://" in self.MONGODB_URL and "/" not in self.MONGODB_URL.split("@")[1].split("?")[0]:
@@ -70,11 +78,17 @@ class Settings:
             self.MONGODB_URL = base_url + query_params
             print(f"Added database name to MongoDB URL")
         
-        # Ensure SSL parameters are present for Render compatibility
-        if "ssl=true" not in self.MONGODB_URL and "tls=true" not in self.MONGODB_URL:
+        # Ensure proper TLS parameters for modern MongoDB
+        if "tls=true" not in self.MONGODB_URL and "ssl=true" not in self.MONGODB_URL:
             separator = "&" if "?" in self.MONGODB_URL else "?"
-            self.MONGODB_URL += f"{separator}ssl=true&tlsAllowInvalidCertificates=true"
-            print("Added SSL parameters to MongoDB URL")
+            self.MONGODB_URL += f"{separator}tls=true&tlsAllowInvalidCertificates=true"
+            print("Added TLS parameters to MongoDB URL")
+        elif "ssl=true" in self.MONGODB_URL and "tls=true" not in self.MONGODB_URL:
+            # Replace old ssl with new tls
+            self.MONGODB_URL = self.MONGODB_URL.replace("ssl=true", "tls=true")
+            if "tlsAllowInvalidCertificates=true" not in self.MONGODB_URL:
+                self.MONGODB_URL += "&tlsAllowInvalidCertificates=true"
+            print("Updated SSL to TLS parameters")
         
         # Debug output (mask password for security)
         masked_url = self.MONGODB_URL.replace("bu22-2130:bu22-2130@", "***:***@")
