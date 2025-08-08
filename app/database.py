@@ -1,5 +1,3 @@
-import ssl
-import certifi
 import logging
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo.errors import ServerSelectionTimeoutError, ConnectionFailure
@@ -14,52 +12,22 @@ class Database:
 db = Database()
 
 async def connect_to_mongo():
-    """Create database connection with SSL configuration for Render."""
+    """Create database connection - compatible with Motor 3.1.1."""
     try:
         logger.info("Attempting MongoDB connection...")
         
-        # First, try with SSL context configuration
-        ssl_context = ssl.create_default_context(cafile=certifi.where())
-        ssl_context.check_hostname = False
-        ssl_context.verify_mode = ssl.CERT_NONE
+        # Simple connection - let the connection string handle all SSL settings
+        # No SSL parameters in the client constructor for compatibility
+        db.client = AsyncIOMotorClient(
+            settings.MONGODB_URL,
+            serverSelectionTimeoutMS=30000,
+            connectTimeoutMS=30000,
+            maxPoolSize=50
+        )
         
-        try:
-            # Primary connection method with SSL context
-            db.client = AsyncIOMotorClient(
-                settings.MONGODB_URL,
-                ssl_context=ssl_context,
-                serverSelectionTimeoutMS=30000,
-                connectTimeoutMS=30000,
-                socketTimeoutMS=30000,
-                maxPoolSize=50,
-                retryWrites=True
-            )
-            
-            # Test the connection
-            await db.client.admin.command('ping')
-            logger.info("MongoDB connection successful with SSL context")
-            
-        except Exception as ssl_error:
-            logger.warning(f"SSL context connection failed: {ssl_error}")
-            logger.info("Attempting MongoDB connection with SSL parameters...")
-            
-            # Fallback connection method with SSL parameters
-            db.client = AsyncIOMotorClient(
-                settings.MONGODB_URL,
-                ssl=True,
-                ssl_cert_reqs=ssl.CERT_NONE,
-                ssl_match_hostname=False,
-                ssl_ca_certs=certifi.where(),
-                serverSelectionTimeoutMS=30000,
-                connectTimeoutMS=30000,
-                socketTimeoutMS=30000,
-                maxPoolSize=50,
-                retryWrites=True
-            )
-            
-            # Test the connection
-            await db.client.admin.command('ping')
-            logger.info("MongoDB connection successful with SSL parameters")
+        # Test the connection
+        await db.client.admin.command('ping')
+        logger.info("MongoDB connection successful")
         
         # Set database using your settings
         db.database = db.client[settings.MONGODB_DATABASE]
@@ -71,7 +39,6 @@ async def connect_to_mongo():
         db.client = None
         db.database = None
         print(f"Failed to connect to MongoDB: {e}")
-        # Don't raise here - let the app start but handle errors in endpoints
         
     except Exception as e:
         logger.error(f"Unexpected MongoDB connection error: {e}")
