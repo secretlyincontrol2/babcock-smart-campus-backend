@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: babcock-smart-campus-backend
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.0
+      - key: MONGODB_URL
+        value: mongodb+srv://bu22-2130:bu22-2130@cluster0.4nsgp2g.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+      - key: MONGODB_DATABASE
+        value: smart_campus_db
+      - key: SECRET_KEY
+        value: smart-campus-app-secret-key-2024-babcock-university
+      - key: GOOGLE_MAPS_API_KEY
+        value: AIzaSyAa-XKO4DH_CLf647SMZYypDOfk0d1SBUE 
