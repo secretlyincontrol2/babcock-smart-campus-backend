@@ -37,4 +37,7 @@ class Settings:
         self.DEBUG: bool = os.getenv("DEBUG", "False").lower() == "true"
 
         # CORS Settings
-        self.ALLOWED_ORIGINS: list = os.getenv("ALLOWED_ORIGINS", "*").split(",") 
+        self.ALLOWED_ORIGINS: list = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+
+# Create settings instance
+settings = Settings() 
