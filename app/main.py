@@ -3,10 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from contextlib import asynccontextmanager
 from fastapi.responses import JSONResponse
-from fastapi.responses import Response
-import os
+
 from .core.config import settings
-from .database import connect_to_mongo, close_mongo_connection, ensure_connection
+from .database import connect_to_mongo, close_mongo_connection
 from .routers import auth, users, attendance, cafeteria, maps, schedule, chat
 
 # Security
@@ -28,27 +27,20 @@ app = FastAPI(
 )
 
 # CORS middleware - Configure for production with specific origins
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=[
-#         "https://babcock-smart-campus-frontend.onrender.com",
-#         "https://babcock-smart-campus-app.onrender.com", 
-#         "http://localhost:3000",
-#         "http://localhost:8080",
-#         "http://127.0.0.1:3000",
-#         "http://127.0.0.1:8080"
-#     ],
-#     allow_credentials=True,
-#     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-#     allow_headers=["*"],
-#     expose_headers=["*"]
-# )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins - only for development!
+    allow_origins=[
+        "https://babcock-smart-campus-frontend.onrender.com",
+        "https://babcock-smart-campus-app.onrender.com", 
+        "http://localhost:3000",
+        "http://localhost:8080",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:8080"
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
+    expose_headers=["*"]
 )
 
 # Include routers
@@ -67,20 +59,7 @@ async def root():
         "version": settings.APP_VERSION,
         "university": "Babcock University"
     }
-@app.get("/health/db")
-async def health_check():
-    try:
-        database = await ensure_connection()
-        if database:
-            return {"status": "connected", "database": database.name}
-        else:
-            return {"status": "disconnected"}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
-@app.head("/")
-async def root_head():
-    return Response(status_code=200)
-    
+
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "message": "Smart Campus App is running"}
@@ -97,7 +76,7 @@ async def options_handler(full_path: str):
             "Access-Control-Allow-Credentials": "true",
         }
     )
+
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    uvicorn.run(app, host="0.0.0.0", port=8000) 
