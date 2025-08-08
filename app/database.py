@@ -38,12 +38,7 @@ async def connect_to_mongo():
         logger.info("Attempting MongoDB connection...")
         print(f"Using MongoDB URL: {mongodb_url.split('@')[0]}@{mongodb_url.split('@')[1].split('?')[0]}...")
         
-        # Create SSL context with relaxed settings for problematic environments
-        ssl_context = ssl.create_default_context()
-        ssl_context.check_hostname = False
-        ssl_context.verify_mode = ssl.CERT_NONE
-        
-        # Enhanced connection with SSL context and timeout settings
+        # Enhanced connection with proper async motor parameters
         db.client = AsyncIOMotorClient(
             mongodb_url,
             serverSelectionTimeoutMS=60000,  # Increased timeout
@@ -53,7 +48,6 @@ async def connect_to_mongo():
             minPoolSize=1,
             maxIdleTimeMS=30000,
             waitQueueTimeoutMS=10000,
-            ssl_context=ssl_context,  # Use custom SSL context
             tlsAllowInvalidCertificates=True,
             tlsAllowInvalidHostnames=True,
             retryWrites=True,
