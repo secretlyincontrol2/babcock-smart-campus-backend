@@ -36,8 +36,12 @@ class Settings:
         self.APP_VERSION: str = os.getenv("APP_VERSION", "1.0.0")
         self.DEBUG: bool = os.getenv("DEBUG", "False").lower() == "true"
 
-        # CORS Settings
-        self.ALLOWED_ORIGINS: list = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+        # CORS Settings - Allow all origins for development and production
+        cors_origins = os.getenv("ALLOWED_ORIGINS", "*")
+        if cors_origins == "*":
+            self.ALLOWED_ORIGINS = ["*"]
+        else:
+            self.ALLOWED_ORIGINS = [origin.strip() for origin in cors_origins.split(",")]
 
 # Create settings instance
 settings = Settings() 
