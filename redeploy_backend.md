@@ -11,7 +11,7 @@
 Make sure these are set in your Render backend service:
 
 ```
-MONGODB_URL=mongodb+srv://bu22-2130:bu22-2130@cluster0.4nsgp2g.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+MONGODB_URL=mongodb+srv://bu22-2130:bu22-2130@cluster0.4nsgp2g.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0&ssl=true&ssl_cert_reqs=CERT_NONE
 MONGODB_DATABASE=smart_campus_db
 SECRET_KEY=smart-campus-app-secret-key-2024-babcock-university
 GOOGLE_MAPS_API_KEY=AIzaSyAa-XKO4DH_CLf647SMZYypDOfk0d1SBUE
@@ -63,4 +63,11 @@ If you continue having issues, check:
 1. Render service logs for specific errors
 2. MongoDB Atlas connection
 3. Network connectivity
-4. CORS settings 
+4. CORS settings
+
+## 🔧 **MongoDB SSL Issues**
+If you see SSL handshake errors, make sure:
+1. MongoDB URL includes SSL parameters: `&ssl=true&ssl_cert_reqs=CERT_NONE`
+2. MongoDB Atlas cluster is accessible from your deployment region
+3. Network access is properly configured in MongoDB Atlas
+4. Try using the updated connection string with SSL parameters 
