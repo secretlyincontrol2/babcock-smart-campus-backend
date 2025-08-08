@@ -66,7 +66,10 @@ async def root():
         "version": settings.APP_VERSION,
         "university": "Babcock University"
     }
-
+@app.head("/")
+async def root_head():
+    return Response(status_code=200)
+    
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "message": "Smart Campus App is running"}
