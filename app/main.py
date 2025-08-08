@@ -4,7 +4,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from contextlib import asynccontextmanager
 from fastapi.responses import JSONResponse
 from fastapi.responses import Response
-
+import os
 from .core.config import settings
 from .database import connect_to_mongo, close_mongo_connection, ensure_connection
 from .routers import auth, users, attendance, cafeteria, maps, schedule, chat
@@ -97,7 +97,7 @@ async def options_handler(full_path: str):
             "Access-Control-Allow-Credentials": "true",
         }
     )
-
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
