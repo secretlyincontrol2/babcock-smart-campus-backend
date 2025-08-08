@@ -27,20 +27,27 @@ app = FastAPI(
 )
 
 # CORS middleware - Configure for production with specific origins
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=[
+#         "https://babcock-smart-campus-frontend.onrender.com",
+#         "https://babcock-smart-campus-app.onrender.com", 
+#         "http://localhost:3000",
+#         "http://localhost:8080",
+#         "http://127.0.0.1:3000",
+#         "http://127.0.0.1:8080"
+#     ],
+#     allow_credentials=True,
+#     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+#     allow_headers=["*"],
+#     expose_headers=["*"]
+# )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://babcock-smart-campus-frontend.onrender.com",
-        "https://babcock-smart-campus-app.onrender.com", 
-        "http://localhost:3000",
-        "http://localhost:8080",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:8080"
-    ],
+    allow_origins=["*"],  # Allow all origins - only for development!
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"]
 )
 
 # Include routers
