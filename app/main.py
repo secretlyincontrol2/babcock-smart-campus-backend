@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 from fastapi.responses import Response
 
 from .core.config import settings
-from .database import connect_to_mongo, close_mongo_connection
+from .database import connect_to_mongo, close_mongo_connection, ensure_connection
 from .routers import auth, users, attendance, cafeteria, maps, schedule, chat
 
 # Security
@@ -67,6 +67,16 @@ async def root():
         "version": settings.APP_VERSION,
         "university": "Babcock University"
     }
+@app.get("/health/db")
+async def health_check():
+    try:
+        database = await ensure_connection()
+        if database:
+            return {"status": "connected", "database": database.name}
+        else:
+            return {"status": "disconnected"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 @app.head("/")
 async def root_head():
     return Response(status_code=200)
