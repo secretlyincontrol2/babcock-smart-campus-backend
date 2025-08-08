@@ -13,8 +13,7 @@ async def connect_to_mongo():
     db.client = AsyncIOMotorClient(
         settings.MONGODB_URL,
         serverSelectionTimeoutMS=5000,
-        ssl=True,
-        ssl_cert_reqs='CERT_NONE',
+        tls=True,
         tlsAllowInvalidCertificates=True
     )
     db.database = db.client[settings.MONGODB_DATABASE]
