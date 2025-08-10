@@ -66,6 +66,23 @@ class UserModel:
 
     @classmethod
     def from_dict(cls, data: dict):
+        # Handle date conversion safely
+        created_at = data.get("created_at")
+        updated_at = data.get("updated_at")
+        
+        # Convert string dates back to datetime objects if needed
+        if isinstance(created_at, str):
+            try:
+                created_at = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+            except ValueError:
+                created_at = None
+                
+        if isinstance(updated_at, str):
+            try:
+                updated_at = datetime.fromisoformat(updated_at.replace('Z', '+00:00'))
+            except ValueError:
+                updated_at = None
+        
         return cls(
             id=data.get("_id"),
             student_id=data["student_id"],
@@ -78,6 +95,6 @@ class UserModel:
             profile_picture=data.get("profile_picture"),
             is_active=data.get("is_active", True),
             is_verified=data.get("is_verified", False),
-            created_at=data.get("created_at"),
-            updated_at=data.get("updated_at")
+            created_at=created_at,
+            updated_at=updated_at
         ) 

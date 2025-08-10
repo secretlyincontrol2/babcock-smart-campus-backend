@@ -4,7 +4,7 @@ from typing import Optional
 class Settings:
     def __init__(self):
         # MongoDB Database
-        self.MONGODB_URL: str = os.getenv("MONGODB_URL", "mongodb+srv://bu22-2130:bu22-2130@cluster0.4nsgp2g.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+        self.MONGODB_URL: str = os.getenv("MONGODB_URL", "mongodb+srv://bu22-2130:bu22-2130@cluster0.4nsgp2g.mongodb.net/smart_campus_db?retryWrites=true&w=majority")
         self.MONGODB_DATABASE: str = os.getenv("MONGODB_DATABASE", "smart_campus_db")
 
         # Security

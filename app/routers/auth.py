@@ -7,40 +7,12 @@ from bson import ObjectId
 
 from ..core.config import settings
 from ..core.security import get_password_hash, verify_password, create_access_token
+from ..core.utils import format_datetime, format_object_id, prepare_for_json
 from ..database import get_database
+from ..schemas.user import UserCreate, UserLogin, UserResponse, Token
 
 router = APIRouter()
 security = HTTPBearer()
-
-# Pydantic models
-class UserCreate(BaseModel):
-    student_id: str
-    email: str
-    full_name: str
-    password: str
-    department: str
-    level: str
-    phone_number: Optional[str] = None
-
-class UserLogin(BaseModel):
-    email: str
-    password: str
-
-class UserResponse(BaseModel):
-    id: str
-    student_id: str
-    email: str
-    full_name: str
-    department: str
-    level: str
-    phone_number: Optional[str] = None
-    is_active: bool
-    is_verified: bool
-
-class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str
-    user: UserResponse
 
 @router.post("/register", response_model=UserResponse)
 async def register(user_data: UserCreate):
@@ -51,7 +23,8 @@ async def register(user_data: UserCreate):
     if existing_user:
         raise HTTPException(status_code=400, detail="User with this email or student ID already exists")
     
-    # Create user document
+    # Create user document with proper date handling
+    current_time = datetime.utcnow()
     user_doc = {
         "student_id": user_data.student_id,
         "email": user_data.email,
@@ -62,17 +35,31 @@ async def register(user_data: UserCreate):
         "phone_number": user_data.phone_number,
         "is_active": True,
         "is_verified": False,
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow()
+        "created_at": current_time,
+        "updated_at": current_time
     }
     
     result = await db.users.insert_one(user_doc)
     
-    # Return user without password
-    user_doc["id"] = str(result.inserted_id)
-    return UserResponse(**{k: v for k, v in user_doc.items() if k != "password_hash"})
+    # Get the created user with proper ObjectId handling
+    created_user = await db.users.find_one({"_id": result.inserted_id})
+    
+    # Convert MongoDB document to UserResponse schema with proper formatting
+    return UserResponse(
+        _id=format_object_id(created_user["_id"]),
+        student_id=created_user["student_id"],
+        email=created_user["email"],
+        full_name=created_user["full_name"],
+        department=created_user["department"],
+        level=created_user["level"],
+        phone_number=created_user.get("phone_number"),
+        is_active=created_user.get("is_active", True),
+        is_verified=created_user.get("is_verified", False),
+        created_at=format_datetime(created_user.get("created_at")),
+        updated_at=format_datetime(created_user.get("updated_at"))
+    )
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=Token)
 async def login(login_data: UserLogin):
     db = get_database()
     
@@ -94,9 +81,9 @@ async def login(login_data: UserLogin):
         data={"sub": str(user["_id"]), "email": user["email"]}
     )
     
-    # Return token and user info
+    # Return token and user info with proper date handling
     user_response = UserResponse(
-        id=str(user["_id"]),
+        _id=format_object_id(user["_id"]),
         student_id=user["student_id"],
         email=user["email"],
         full_name=user["full_name"],
@@ -104,10 +91,12 @@ async def login(login_data: UserLogin):
         level=user["level"],
         phone_number=user.get("phone_number"),
         is_active=user.get("is_active", True),
-        is_verified=user.get("is_verified", False)
+        is_verified=user.get("is_verified", False),
+        created_at=format_datetime(user.get("created_at")),
+        updated_at=format_datetime(user.get("updated_at"))
     )
     
-    return TokenResponse(
+    return Token(
         access_token=access_token,
         token_type="bearer",
         user=user_response

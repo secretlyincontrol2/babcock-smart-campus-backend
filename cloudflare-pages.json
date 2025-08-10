@@ -1,0 +1,15 @@
+{
+  "build": {
+    "command": "pip install -r requirements.txt",
+    "output": ".",
+    "environment": {
+      "PYTHON_VERSION": "3.11"
+    }
+  },
+  "routes": [
+    {
+      "pattern": "/*",
+      "script": "app/main.py"
+    }
+  ]
+}

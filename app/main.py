@@ -3,10 +3,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from contextlib import asynccontextmanager
 from fastapi.responses import JSONResponse
+import logging
 
 from .core.config import settings
-from .database import connect_to_mongo, close_mongo_connection
+from .database import connect_to_mongo, close_mongo_connection, check_database_health
 from .routers import auth, users, attendance, cafeteria, maps, schedule, chat
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Security
 security = HTTPBearer()
@@ -14,10 +19,16 @@ security = HTTPBearer()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    await connect_to_mongo()
+    try:
+        await connect_to_mongo()
+        logger.info("✅ Application startup completed successfully")
+    except Exception as e:
+        logger.error(f"❌ Application startup failed: {e}")
+        # Don't raise here, let the app start but mark database as unavailable
     yield
     # Shutdown
     await close_mongo_connection()
+    logger.info("Application shutdown completed")
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -62,7 +73,44 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "message": "Smart Campus App is running"}
+    """Enhanced health check with database status"""
+    try:
+        db_healthy = await check_database_health()
+        if db_healthy:
+            return {
+                "status": "healthy", 
+                "message": "Smart Campus App is running",
+                "database": "connected",
+                "timestamp": "2025-08-10T11:24:06Z"
+            }
+        else:
+            return {
+                "status": "degraded",
+                "message": "Smart Campus App is running but database is unavailable",
+                "database": "disconnected",
+                "timestamp": "2025-08-10T11:24:06Z"
+            }
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return {
+            "status": "unhealthy",
+            "message": "Smart Campus App health check failed",
+            "database": "unknown",
+            "error": str(e),
+            "timestamp": "2025-08-10T11:24:06Z"
+        }
+
+@app.get("/db-status")
+async def database_status():
+    """Check database connection status specifically"""
+    try:
+        db_healthy = await check_database_health()
+        if db_healthy:
+            return {"status": "connected", "message": "Database is accessible"}
+        else:
+            return {"status": "disconnected", "message": "Database is not accessible"}
+    except Exception as e:
+        return {"status": "error", "message": f"Database check failed: {str(e)}"}
 
 @app.options("/{full_path:path}")
 async def options_handler(full_path: str):
