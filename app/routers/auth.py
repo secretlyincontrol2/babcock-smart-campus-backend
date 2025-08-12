@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from datetime import datetime, timedelta
 from typing import List, Optional
-import jwt
+from jose import jwt
 from passlib.context import CryptContext
 from bson import ObjectId
 
@@ -30,7 +30,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def register_user(user_data: UserCreate, background_tasks: BackgroundTasks):
     """Register a new user"""
-    db = get_database()
+    db = await get_database()
     
     # Check if email already exists
     existing_user = await db.users.find_one({"email": user_data.email})
@@ -80,7 +80,7 @@ async def register_user(user_data: UserCreate, background_tasks: BackgroundTasks
 @router.post("/login", response_model=Token)
 async def login_user(form_data: OAuth2PasswordRequestForm = Depends()):
     """Login user and return access token"""
-    db = get_database()
+    db = await get_database()
     
     # Find user by email
     user_data = await db.users.find_one({"email": form_data.username})
