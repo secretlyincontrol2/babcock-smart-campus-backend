@@ -91,4 +91,13 @@ celerybeat.pid
 # mypy
 .mypy_cache/
 .dmypy.json
-dmypy.json 
+dmypy.json "*.pyc" 
+"*.pyc" 
+"__pycache__/" 
+"*.pyo" 
+"*.pyd" 
+".Python" 
+"env/" 
+"venv/" 
+".env" 
+".venv" 

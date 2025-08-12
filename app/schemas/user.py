@@ -1,8 +1,21 @@
 from pydantic import BaseModel, Field, field_validator, EmailStr
-from typing import Optional, Annotated
+from typing import Optional, Annotated, List
 from datetime import datetime
 from bson import ObjectId
+from enum import Enum
 from ..core.validators import validate_student_id, validate_phone_number
+
+class UserRole(str, Enum):
+    STUDENT = "student"
+    DEPARTMENT_ADMIN = "department_admin"
+    CAFETERIA_ADMIN = "cafeteria_admin"
+    SUPER_ADMIN = "super_admin"
+
+class UserStatus(str, Enum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    SUSPENDED = "suspended"
+    GRADUATED = "graduated"
 
 class PyObjectId(str):
     @classmethod
@@ -22,12 +35,14 @@ class UserBase(BaseModel):
     department: str
     level: str
     phone_number: Optional[str] = None
+    role: UserRole = UserRole.STUDENT
+    status: UserStatus = UserStatus.ACTIVE
     
     @field_validator('student_id')
     @classmethod
     def validate_student_id_format(cls, v):
         if not validate_student_id(v):
-            raise ValueError('Invalid student ID format. Expected: BU followed by 8 digits (e.g., BU2024001)')
+            raise ValueError('Invalid student ID format. Expected: BU followed by 7 digits (e.g., BU2024001)')
         return v
     
     @field_validator('phone_number')
@@ -53,6 +68,8 @@ class UserUpdate(BaseModel):
     level: Optional[str] = None
     phone_number: Optional[str] = None
     profile_picture: Optional[str] = None
+    role: Optional[UserRole] = None
+    status: Optional[UserStatus] = None
     
     @field_validator('phone_number')
     @classmethod
@@ -72,6 +89,7 @@ class UserResponse(UserBase):
     is_verified: bool
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    permissions: List[str] = []
     
     class Config:
         from_attributes = True
@@ -85,6 +103,42 @@ class Token(BaseModel):
     access_token: str
     token_type: str
     user: UserResponse
+    permissions: List[str]
 
 class TokenData(BaseModel):
-    email: Optional[str] = None 
+    email: Optional[str] = None
+    role: Optional[UserRole] = None
+    permissions: List[str] = []
+
+# Admin-specific schemas
+class AdminCreate(BaseModel):
+    email: EmailStr
+    full_name: str
+    department: str
+    password: str
+    role: UserRole
+    phone_number: Optional[str] = None
+
+class AdminUpdate(BaseModel):
+    full_name: Optional[str] = None
+    department: Optional[str] = None
+    phone_number: Optional[str] = None
+    role: Optional[UserRole] = None
+    status: Optional[UserStatus] = None
+
+# Permission schemas
+class Permission(BaseModel):
+    id: Annotated[PyObjectId, Field(default_factory=PyObjectId, alias="_id")]
+    name: str
+    description: str
+    resource: str
+    action: str
+    created_at: Optional[datetime] = None
+
+class Role(BaseModel):
+    id: Annotated[PyObjectId, Field(default_factory=PyObjectId, alias="_id")]
+    name: str
+    description: str
+    permissions: List[str]
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None 

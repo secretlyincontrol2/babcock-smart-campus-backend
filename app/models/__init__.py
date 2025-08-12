@@ -1,20 +1,9 @@
-from .user import User
-from .attendance import Attendance, Class
-from .cafeteria import Cafeteria, MenuItem
-from .schedule import Schedule
-from .chat import ChatMessage, ChatRoom
-from .maps import Location
-from ..database import Base
+# MongoDB models - only import what's needed and compatible
+from .user import UserModel
+
+# Note: Other models are SQLAlchemy-based and not compatible with MongoDB setup
+# They will be imported individually when needed
 
 __all__ = [
-    "User",
-    "Attendance", 
-    "Class",
-    "Cafeteria",
-    "MenuItem",
-    "Schedule",
-    "ChatMessage",
-    "ChatRoom",
-    "Location",
-    "Base"
+    "UserModel"
 ] 

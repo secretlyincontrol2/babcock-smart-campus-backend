@@ -71,4 +71,8 @@ If you see SSL handshake errors, make sure:
 2. MongoDB Atlas cluster is accessible from your deployment region
 3. Network access is properly configured in MongoDB Atlas
 4. Check MongoDB Atlas IP whitelist settings
+<<<<<<< HEAD
 5. Verify the cluster is running and accessible 
+=======
+5. Verify the cluster is running and accessible 
+>>>>>>> df47284709042f7d0ecc8c06cb6739cbe2fb011e
