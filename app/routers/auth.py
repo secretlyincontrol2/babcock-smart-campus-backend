@@ -139,7 +139,7 @@ async def register_admin(
             detail="Insufficient privileges to create admin accounts"
         )
     
-    db = get_database()
+    db = await get_database()
     
     # Check if email already exists
     existing_user = await db.users.find_one({"email": admin_data.email})
@@ -182,7 +182,7 @@ async def update_current_user(
     current_user: UserModel = Depends(get_current_active_user)
 ):
     """Update current user information"""
-    db = get_database()
+    db = await get_database()
     
     # Update user fields
     update_data = user_update.dict(exclude_unset=True)
@@ -210,7 +210,7 @@ async def update_user(
             detail="Insufficient privileges"
         )
     
-    db = get_database()
+    db = await get_database()
     
     # Find user to update
     user_data = await db.users.find_one({"_id": ObjectId(user_id)})
@@ -250,7 +250,7 @@ async def get_users(
             detail="Insufficient privileges"
         )
     
-    db = get_database()
+    db = await get_database()
     
     # Build filter
     filter_query = {}
@@ -280,7 +280,7 @@ async def delete_user(
             detail="Only super admins can delete users"
         )
     
-    db = get_database()
+    db = await get_database()
     
     # Check if user exists
     user_data = await db.users.find_one({"_id": ObjectId(user_id)})
