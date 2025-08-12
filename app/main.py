@@ -1,16 +1,24 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from contextlib import asynccontextmanager
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.security import HTTPBearer
+from contextlib import asynccontextmanager
 import logging
+import time
+from typing import Dict, Any
 
 from .core.config import settings
 from .database import connect_to_mongo, close_mongo_connection, check_database_health
 from .routers import auth, users, attendance, cafeteria, maps, schedule, chat
+from .core.exceptions import CustomHTTPException
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO if not settings.DEBUG else logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 # Security
@@ -18,41 +26,97 @@ security = HTTPBearer()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """Application lifespan manager"""
     # Startup
+    startup_time = time.time()
     try:
-        await connect_to_mongo()
-        logger.info("✅ Application startup completed successfully")
+        logger.info("🚀 Starting Smart Campus App...")
+        # Try to connect to MongoDB but don't fail if it doesn't work
+        if not settings.DEMO_MODE:
+            try:
+                await connect_to_mongo()
+                logger.info("✅ MongoDB connection established")
+            except Exception as e:
+                logger.warning(f"⚠️ MongoDB connection failed (continuing without database): {e}")
+                logger.info("📝 Running in offline/demo mode - some features may be limited")
+        else:
+            logger.info("🎭 Running in DEMO MODE - MongoDB connection skipped")
+            logger.info("📝 Demo mode enabled - using mock data and limited features")
+        
+        startup_duration = time.time() - startup_time
+        logger.info(f"✅ Application startup completed successfully in {startup_duration:.2f}s")
     except Exception as e:
-        logger.error(f"❌ Application startup failed: {e}")
+        startup_duration = time.time() - startup_time
+        logger.error(f"❌ Application startup failed after {startup_duration:.2f}s: {e}")
         # Don't raise here, let the app start but mark database as unavailable
+    
     yield
+    
     # Shutdown
-    await close_mongo_connection()
-    logger.info("Application shutdown completed")
+    try:
+        await close_mongo_connection()
+        logger.info("🔄 Application shutdown completed")
+    except Exception as e:
+        logger.error(f"❌ Error during shutdown: {e}")
 
+# Create FastAPI app
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
-    description="Smart Campus App API for Babcock University",
+    description="Smart Campus App API for Babcock University - Modern, Secure, and Scalable",
+    docs_url="/docs" if settings.DEBUG else None,
+    redoc_url="/redoc" if settings.DEBUG else None,
+    openapi_url="/openapi.json" if settings.DEBUG else None,
     lifespan=lifespan
 )
 
-# CORS middleware - Configure for production with specific origins
+# Security middleware
+if not settings.DEBUG:
+    app.add_middleware(
+        TrustedHostMiddleware,
+        allowed_hosts=["*"]  # Configure with specific hosts in production
+    )
+
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://babcock-smart-campus-frontend.onrender.com",
-        "https://babcock-smart-campus-app.onrender.com", 
-        "http://localhost:3000",
-        "http://localhost:8080",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:8080"
-    ],
+    allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
     expose_headers=["*"]
 )
+
+# Compression middleware
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# Global exception handler
+@app.exception_handler(CustomHTTPException)
+async def custom_http_exception_handler(request: Request, exc: CustomHTTPException):
+    """Handle custom HTTP exceptions"""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": exc.detail,
+            "type": exc.error_type,
+            "timestamp": time.time(),
+            "path": request.url.path
+        }
+    )
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Global exception handler for unexpected errors"""
+    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "Internal server error",
+            "type": "internal_error",
+            "timestamp": time.time(),
+            "path": request.url.path
+        }
+    )
 
 # Include routers
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
@@ -65,52 +129,110 @@ app.include_router(chat.router, prefix="/chat", tags=["Chat"])
 
 @app.get("/")
 async def root():
+    """Root endpoint with API information"""
     return {
         "message": "Welcome to Smart Campus App API",
         "version": settings.APP_VERSION,
-        "university": "Babcock University"
+        "university": "Babcock University",
+        "status": "operational",
+        "documentation": "/docs" if settings.DEBUG else "Documentation disabled in production"
     }
 
 @app.get("/health")
 async def health_check():
-    """Enhanced health check with database status"""
+    """Enhanced health check with comprehensive system status"""
     try:
+        start_time = time.time()
         db_healthy = await check_database_health()
-        if db_healthy:
-            return {
-                "status": "healthy", 
-                "message": "Smart Campus App is running",
-                "database": "connected",
-                "timestamp": "2025-08-10T11:24:06Z"
+        check_duration = time.time() - start_time
+        
+        health_data = {
+            "status": "healthy" if db_healthy else "degraded",
+            "message": "Smart Campus App is running",
+            "version": settings.APP_VERSION,
+            "timestamp": time.time(),
+            "checks": {
+                "database": {
+                    "status": "connected" if db_healthy else "disconnected",
+                    "response_time": f"{check_duration:.3f}s"
+                },
+                "api": {
+                    "status": "operational",
+                    "response_time": f"{time.time() - start_time:.3f}s"
+                }
             }
-        else:
-            return {
-                "status": "degraded",
-                "message": "Smart Campus App is running but database is unavailable",
-                "database": "disconnected",
-                "timestamp": "2025-08-10T11:24:06Z"
-            }
+        }
+        
+        if not db_healthy:
+            health_data["status"] = "degraded"
+            health_data["message"] = "Smart Campus App is running but database is unavailable"
+        
+        return health_data
+        
     except Exception as e:
         logger.error(f"Health check failed: {e}")
         return {
             "status": "unhealthy",
             "message": "Smart Campus App health check failed",
-            "database": "unknown",
-            "error": str(e),
-            "timestamp": "2025-08-10T11:24:06Z"
+            "version": settings.APP_VERSION,
+            "timestamp": time.time(),
+            "error": str(e)
         }
 
 @app.get("/db-status")
 async def database_status():
     """Check database connection status specifically"""
     try:
+        start_time = time.time()
         db_healthy = await check_database_health()
+        response_time = time.time() - start_time
+        
         if db_healthy:
-            return {"status": "connected", "message": "Database is accessible"}
+            return {
+                "status": "connected", 
+                "message": "Database is accessible",
+                "response_time": f"{response_time:.3f}s"
+            }
         else:
-            return {"status": "disconnected", "message": "Database is not accessible"}
+            return {
+                "status": "disconnected", 
+                "message": "Database is not accessible",
+                "response_time": f"{response_time:.3f}s"
+            }
     except Exception as e:
-        return {"status": "error", "message": f"Database check failed: {str(e)}"}
+        return {
+            "status": "error", 
+            "message": f"Database check failed: {str(e)}",
+            "timestamp": time.time()
+        }
+
+@app.get("/info")
+async def api_info():
+    """Get API information and configuration details"""
+    return {
+        "name": settings.APP_NAME,
+        "version": settings.APP_VERSION,
+        "environment": "production" if not settings.DEBUG else "development",
+        "debug": settings.DEBUG,
+        "features": {
+            "authentication": True,
+            "maps": True,
+            "attendance": True,
+            "cafeteria": True,
+            "schedule": True,
+            "chat": True,
+            "file_upload": True
+        },
+        "database": {
+            "type": "MongoDB",
+            "name": settings.MONGODB_DATABASE
+        },
+        "security": {
+            "cors_enabled": True,
+            "trusted_hosts": not settings.DEBUG,
+            "compression": True
+        }
+    }
 
 @app.options("/{full_path:path}")
 async def options_handler(full_path: str):
@@ -118,7 +240,7 @@ async def options_handler(full_path: str):
     return JSONResponse(
         content={},
         headers={
-            "Access-Control-Allow-Origin": "https://babcock-smart-campus-frontend.onrender.com",
+            "Access-Control-Allow-Origin": ",".join(settings.ALLOWED_ORIGINS),
             "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
             "Access-Control-Allow-Headers": "*",
             "Access-Control-Allow-Credentials": "true",
@@ -127,4 +249,9 @@ async def options_handler(full_path: str):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+    uvicorn.run(
+        app, 
+        host="0.0.0.0", 
+        port=8000,
+        log_level="info" if not settings.DEBUG else "debug"
+    ) 

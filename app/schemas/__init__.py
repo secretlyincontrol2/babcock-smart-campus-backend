@@ -1,15 +1,15 @@
 from .user import UserCreate, UserUpdate, UserResponse, UserLogin
-from .attendance import AttendanceCreate, AttendanceResponse, ClassCreate, ClassResponse
-from .cafeteria import CafeteriaCreate, CafeteriaResponse, MenuItemCreate, MenuItemResponse
-from .schedule import ScheduleCreate, ScheduleResponse
-from .chat import ChatMessageCreate, ChatMessageResponse, ChatRoomCreate, ChatRoomResponse
-from .maps import LocationCreate, LocationResponse
+from .attendance import AttendanceCreate, ClassCreate, ClassResponse, ClassAttendance, AttendanceUpdate, AttendanceStats, AttendanceReport, QRCodeGenerate, QRCodeScan, QRCodeValidation
+from .cafeteria import FoodItemCreate, FoodItemUpdate, FoodItem, MenuDayCreate, MenuDayUpdate, MenuDay, CafeteriaQRCode, QRCodeScanRequest, QRCodeScanResponse, CafeteriaStats
+from .schedule import ScheduleCreate, ScheduleUpdate, ClassSchedule, StudentSchedule, ScheduleConflict, ScheduleStats, TodaySchedule, NextClass
+from .chat import ChatRoomCreate, ChatRoomUpdate, ChatRoom, ChatMessage, MessageCreate, MessageUpdate, MessageDelete, ChatStats, RoomMember, DirectMessage
+from .maps import LocationCreate, LocationResponse, LocationUpdate, DirectionsRequest, DirectionsResponse, NearbyRequest, NearbyResponse, CampusInfoResponse
 
 __all__ = [
     "UserCreate", "UserUpdate", "UserResponse", "UserLogin",
-    "AttendanceCreate", "AttendanceResponse", "ClassCreate", "ClassResponse",
-    "CafeteriaCreate", "CafeteriaResponse", "MenuItemCreate", "MenuItemResponse",
-    "ScheduleCreate", "ScheduleResponse",
-    "ChatMessageCreate", "ChatMessageResponse", "ChatRoomCreate", "ChatRoomResponse",
-    "LocationCreate", "LocationResponse"
+    "AttendanceCreate", "ClassCreate", "ClassResponse", "ClassAttendance", "AttendanceUpdate", "AttendanceStats", "AttendanceReport", "QRCodeGenerate", "QRCodeScan", "QRCodeValidation",
+    "FoodItemCreate", "FoodItemUpdate", "FoodItem", "MenuDayCreate", "MenuDayUpdate", "MenuDay", "CafeteriaQRCode", "QRCodeScanRequest", "QRCodeScanResponse", "CafeteriaStats",
+    "ScheduleCreate", "ScheduleUpdate", "ClassSchedule", "StudentSchedule", "ScheduleConflict", "ScheduleStats", "TodaySchedule", "NextClass",
+    "ChatRoomCreate", "ChatRoomUpdate", "ChatRoom", "ChatMessage", "MessageCreate", "MessageUpdate", "MessageDelete", "ChatStats", "RoomMember", "DirectMessage",
+    "LocationCreate", "LocationResponse", "LocationUpdate", "DirectionsRequest", "DirectionsResponse", "NearbyRequest", "NearbyResponse", "CampusInfoResponse"
 ] 
