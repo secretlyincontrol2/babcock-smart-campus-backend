@@ -2,6 +2,8 @@ import asyncio
 import logging
 from typing import Optional, Dict, Any
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
+from pymongo import MongoClient
+from pymongo.database import Database as SyncDatabase
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError, OperationFailure
 from pymongo.server_api import ServerApi
 import time
@@ -205,37 +207,117 @@ class DatabaseManager:
 # Global database manager instance
 db_manager = DatabaseManager()
 
-# Convenience functions for backward compatibility
-async def connect_to_mongo() -> bool:
-    """Connect to MongoDB"""
+# ------------------------------
+# Synchronous Database (for Flask)
+# ------------------------------
+
+class SyncDatabaseManager:
+    """Synchronous MongoDB manager for Flask routes and lifecycle"""
+    def __init__(self):
+        self.client: Optional[MongoClient] = None
+        self.database: Optional[SyncDatabase] = None
+        self._is_connected: bool = False
+
+    def connect(self) -> bool:
+        try:
+            if self._is_connected and self.client:
+                return True
+            self.client = MongoClient(settings.MONGODB_URL, server_api=ServerApi('1'))
+            # Ping
+            self.client.admin.command('ping')
+            self.database = self.client[settings.MONGODB_DATABASE]
+            self.database.command('ping')
+            self._is_connected = True
+            logger.info(f"✅ [SYNC] Connected to MongoDB database: {settings.MONGODB_DATABASE}")
+            return True
+        except Exception as e:
+            logger.error(f"❌ [SYNC] MongoDB connection failed: {e}")
+            self._is_connected = False
+            return False
+
+    def disconnect(self):
+        try:
+            if self.client:
+                self.client.close()
+            self.client = None
+            self.database = None
+            self._is_connected = False
+            logger.info("[SYNC] MongoDB client connection closed")
+        except Exception as e:
+            logger.error(f"[SYNC] Error closing MongoDB connection: {e}")
+
+    def get_database(self) -> SyncDatabase:
+        if not self._is_connected or not self.database:
+            self.connect()
+        if not self.database:
+            raise ConnectionError("Failed to establish database connection (sync)")
+        return self.database
+
+    def check_health(self) -> Dict[str, Any]:
+        try:
+            if not self._is_connected:
+                return {"status": "unhealthy", "message": "Not connected"}
+            self.client.admin.command('ping')
+            self.database.command('ping')
+            return {"status": "healthy", "database": settings.MONGODB_DATABASE}
+        except Exception as e:
+            return {"status": "unhealthy", "message": str(e)}
+
+    def ping(self) -> bool:
+        try:
+            if not self._is_connected:
+                return False
+            self.client.admin.command('ping')
+            return True
+        except Exception:
+            return False
+
+
+sync_db_manager = SyncDatabaseManager()
+
+# Convenience functions (SYNC for Flask)
+def connect_to_mongo() -> bool:
+    return sync_db_manager.connect()
+
+def close_mongo_connection():
+    sync_db_manager.disconnect()
+
+def get_database():
+    return sync_db_manager.get_database()
+
+def ensure_connection() -> bool:
+    return sync_db_manager.connect()
+
+def check_database_health() -> Dict[str, Any]:
+    return sync_db_manager.check_health()
+
+def ping_database() -> bool:
+    return sync_db_manager.ping()
+
+# Async convenience functions (retained for backward compatibility)
+async def connect_to_mongo_async() -> bool:
     return await db_manager.connect()
 
-async def close_mongo_connection():
-    """Close MongoDB connection"""
+async def close_mongo_connection_async():
     await db_manager.disconnect()
 
-async def get_database():
-    """Get database instance"""
+async def get_database_async():
     return await db_manager.get_database()
 
-async def ensure_connection() -> bool:
-    """Ensure database connection is active"""
+async def ensure_connection_async() -> bool:
     return await db_manager.ensure_connection()
 
-async def check_database_health() -> Dict[str, Any]:
-    """Check database health"""
+async def check_database_health_async() -> Dict[str, Any]:
     return await db_manager.check_health()
 
-async def ping_database() -> bool:
-    """Ping database"""
+async def ping_database_async() -> bool:
     return await db_manager.ping()
 
 # Database collections
 def get_collection(collection_name: str):
     """Get a specific collection from the database"""
-    if not db_manager.database:
-        raise ConnectionError("Database not connected")
-    return db_manager.database[collection_name]
+    db_sync = sync_db_manager.get_database()
+    return db_sync[collection_name]
 
 # Collection names as constants
 USERS_COLLECTION = "users"
