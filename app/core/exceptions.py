@@ -1,8 +1,8 @@
-from fastapi import HTTPException, status
 from typing import Any, Dict, Optional
+from http import HTTPStatus
 
-class CustomHTTPException(HTTPException):
-    """Custom HTTP exception with additional error information"""
+class CustomHTTPException(Exception):
+    """Custom HTTP exception with additional error information (Flask-compatible)"""
     def __init__(
         self,
         status_code: int,
@@ -10,7 +10,8 @@ class CustomHTTPException(HTTPException):
         error_type: str = "general_error",
         extra_data: Optional[Dict[str, Any]] = None
     ):
-        super().__init__(status_code=status_code, detail=detail)
+        self.status_code = int(status_code)
+        self.detail = detail
         self.error_type = error_type
         self.extra_data = extra_data or {}
 
@@ -24,7 +25,7 @@ class ValidationError(CustomHTTPException):
             extra_data["value"] = str(value)
         
         super().__init__(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
             detail=message,
             error_type="validation_error",
             extra_data=extra_data
@@ -38,7 +39,7 @@ class DatabaseError(CustomHTTPException):
             extra_data["operation"] = operation
         
         super().__init__(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             detail=message,
             error_type="database_error",
             extra_data=extra_data
@@ -48,7 +49,7 @@ class ResourceNotFoundError(CustomHTTPException):
     """Resource not found exception"""
     def __init__(self, resource_type: str, resource_id: str):
         super().__init__(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=HTTPStatus.NOT_FOUND,
             detail=f"{resource_type} with ID {resource_id} not found",
             error_type="resource_not_found",
             extra_data={"resource_type": resource_type, "resource_id": resource_id}
@@ -58,7 +59,7 @@ class AuthorizationError(CustomHTTPException):
     """Authorization error exception"""
     def __init__(self, message: str = "Insufficient privileges"):
         super().__init__(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=HTTPStatus.FORBIDDEN,
             detail=message,
             error_type="authorization_error"
         )
@@ -71,7 +72,7 @@ class ConflictError(CustomHTTPException):
             extra_data["field"] = field
         
         super().__init__(
-            status_code=status.HTTP_409_CONFLICT,
+            status_code=HTTPStatus.CONFLICT,
             detail=message,
             error_type="conflict_error",
             extra_data=extra_data
@@ -81,7 +82,7 @@ class RateLimitError(CustomHTTPException):
     """Rate limit exceeded exception"""
     def __init__(self, message: str = "Rate limit exceeded"):
         super().__init__(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            status_code=HTTPStatus.TOO_MANY_REQUESTS,
             detail=message,
             error_type="rate_limit_error"
         )
@@ -90,7 +91,7 @@ class ServiceUnavailableError(CustomHTTPException):
     """Service unavailable exception"""
     def __init__(self, message: str = "Service temporarily unavailable"):
         super().__init__(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            status_code=HTTPStatus.SERVICE_UNAVAILABLE,
             detail=message,
             error_type="service_unavailable"
         )
@@ -99,7 +100,7 @@ class InvalidLocationError(CustomHTTPException):
     """Invalid location exception"""
     def __init__(self, message: str = "Invalid location data"):
         super().__init__(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=HTTPStatus.BAD_REQUEST,
             detail=message,
             error_type="invalid_location"
         )
@@ -108,7 +109,7 @@ class FileUploadError(CustomHTTPException):
     """File upload error exception"""
     def __init__(self, message: str = "File upload failed"):
         super().__init__(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=HTTPStatus.BAD_REQUEST,
             detail=message,
             error_type="file_upload_error"
         )
@@ -117,7 +118,7 @@ class ExternalServiceError(CustomHTTPException):
     """External service error exception"""
     def __init__(self, message: str = "External service error"):
         super().__init__(
-            status_code=status.HTTP_502_BAD_GATEWAY,
+            status_code=HTTPStatus.BAD_GATEWAY,
             detail=message,
             error_type="external_service_error"
         )
@@ -126,7 +127,7 @@ class QRCodeExpiredError(CustomHTTPException):
     """QR code expired exception"""
     def __init__(self, message: str = "QR code has expired"):
         super().__init__(
-            status_code=status.HTTP_410_GONE,
+            status_code=HTTPStatus.GONE,
             detail=message,
             error_type="qr_code_expired"
         )
@@ -135,7 +136,7 @@ class DuplicateAttendanceError(CustomHTTPException):
     """Duplicate attendance exception"""
     def __init__(self, message: str = "Attendance already marked"):
         super().__init__(
-            status_code=status.HTTP_409_CONFLICT,
+            status_code=HTTPStatus.CONFLICT,
             detail=message,
             error_type="duplicate_attendance"
         )
