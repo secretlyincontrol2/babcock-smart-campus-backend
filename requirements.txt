@@ -15,4 +15,5 @@ aiofiles==23.2.1
 python-dateutil==2.8.2
 pytz==2023.3
 gunicorn==21.2.0
+vercel-wsgi==0.8.0
 
