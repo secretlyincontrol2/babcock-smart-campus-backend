@@ -360,7 +360,7 @@ async def get_user_profile(
 ):
     """Get current user's detailed profile with statistics"""
     try:
-        db = get_database()
+        db = await get_database()
         service = UserService(db)
         
         result = await service.get_user_profile(str(current_user._id))
@@ -382,7 +382,7 @@ async def update_user_profile(
 ):
     """Update current user's profile"""
     try:
-        db = get_database()
+        db = await get_database()
         service = UserService(db)
         
         result = await service.update_user_profile(
@@ -412,7 +412,7 @@ async def get_students(
 ):
     """Get students with comprehensive filtering, search, and pagination (admin only)"""
     try:
-        db = get_database()
+        db = await get_database()
         service = UserService(db)
         
         result = await service.get_students(
@@ -443,7 +443,7 @@ async def get_user_by_id(
 ):
     """Get user by ID (admin only)"""
     try:
-        db = get_database()
+        db = await get_database()
         service = UserService(db)
         
         result = await service.get_user_by_id(user_id)
@@ -465,7 +465,7 @@ async def deactivate_user(
 ):
     """Deactivate user account (admin only)"""
     try:
-        db = get_database()
+        db = await get_database()
         service = UserService(db)
         
         result = await service.deactivate_user(user_id, current_user)
@@ -487,7 +487,7 @@ async def reactivate_user(
 ):
     """Reactivate user account (admin only)"""
     try:
-        db = get_database()
+        db = await get_database()
         service = UserService(db)
         
         result = await service.reactivate_user(user_id, current_user)
@@ -513,7 +513,7 @@ async def get_user_stats(
         if str(current_user._id) != user_id and not current_user.can_manage_users():
             raise AuthorizationError("Cannot view other user's statistics")
         
-        db = get_database()
+        db = await get_database()
         service = UserService(db)
         
         result = await service._get_user_stats(user_id)

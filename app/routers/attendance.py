@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, 
 from fastapi.security import HTTPBearer
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta, time
-import qrcode
+# import qrcode  # Temporarily disabled for deployment
 import io
 import base64
 import json
@@ -25,6 +25,7 @@ from ..core.exceptions import (
     CustomHTTPException, ValidationError, DatabaseError, 
     QRCodeExpiredError, DuplicateAttendanceError
 )
+from ..core.qr_generator import LightweightQRGenerator
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -137,17 +138,9 @@ class AttendanceService:
             qr_json = json.dumps(qr_data)
             qr_hash = hashlib.sha256(qr_json.encode()).hexdigest()
             
-            # Create QR code image
-            qr = qrcode.QRCode(version=1, box_size=10, border=5)
-            qr.add_data(qr_json)
-            qr.make(fit=True)
-            
-            img = qr.make_image(fill_color="black", back_color="white")
-            
-            # Convert to base64
-            buffer = io.BytesIO()
-            img.save(buffer, format="PNG")
-            qr_base64 = base64.b64encode(buffer.getvalue()).decode()
+            # Create QR code using lightweight generator
+            qr_info = LightweightQRGenerator.generate_qr_info(qr_json)
+            qr_base64 = qr_info["base64_svg"]
             
             # Store QR code in database
             qr_doc = {
@@ -487,7 +480,7 @@ async def create_class(
                 detail="Insufficient privileges to create classes"
             )
         
-        db = get_database()
+        db = await get_database()
         service = AttendanceService(db)
         
         result = await service.create_class(class_data, str(current_user._id))
@@ -519,7 +512,7 @@ async def get_classes(
 ):
     """Get classes with comprehensive filtering and pagination"""
     try:
-        db = get_database()
+        db = await get_database()
         
         # Build filter query
         filter_query = {}
@@ -589,7 +582,7 @@ async def get_qr_code(
                 detail="Insufficient privileges to generate QR codes"
             )
         
-        db = get_database()
+        db = await get_database()
         service = AttendanceService(db)
         
         result = await service.generate_qr_code(class_id, str(current_user._id))
@@ -611,7 +604,7 @@ async def scan_qr(
 ):
     """Scan QR code to mark attendance"""
     try:
-        db = get_database()
+        db = await get_database()
         service = AttendanceService(db)
         
         result = await service.scan_qr_code(qr_data, str(current_user._id))
@@ -670,7 +663,7 @@ async def get_my_attendance(
                 detail="Start date cannot be after end date"
             )
         
-        db = get_database()
+        db = await get_database()
         service = AttendanceService(db)
         
         result = await service.get_my_attendance(
@@ -693,7 +686,7 @@ async def get_attendance_stats(
 ):
     """Get comprehensive attendance statistics for current user"""
     try:
-        db = get_database()
+        db = await get_database()
         service = AttendanceService(db)
         
         result = await service.get_attendance_stats(str(current_user._id))
@@ -727,7 +720,7 @@ async def get_class_attendance_report(
                 detail="Insufficient privileges to view attendance reports"
             )
         
-        db = get_database()
+        db = await get_database()
         
         # Get class information
         class_data = await db.classes.find_one({"_id": ObjectId(class_id)})

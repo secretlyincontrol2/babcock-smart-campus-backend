@@ -508,7 +508,7 @@ async def create_schedule(
 ):
     """Create a new schedule with conflict detection"""
     try:
-        db = get_database()
+        db = await get_database()
         service = ScheduleService(db)
         
         result = await service.create_schedule(schedule_data, str(current_user._id))
@@ -554,7 +554,7 @@ async def get_schedules(
         if start_dt and end_dt and start_dt > end_dt:
             raise ValidationError("Start date cannot be after end date")
         
-        db = get_database()
+        db = await get_database()
         service = ScheduleService(db)
         
         result = await service.get_schedules(
@@ -577,7 +577,7 @@ async def get_today_schedule(
 ):
     """Get today's schedule for current user"""
     try:
-        db = get_database()
+        db = await get_database()
         service = ScheduleService(db)
         
         result = await service.get_today_schedule(str(current_user._id))
@@ -598,7 +598,7 @@ async def get_next_class(
 ):
     """Get user's next upcoming class"""
     try:
-        db = get_database()
+        db = await get_database()
         service = ScheduleService(db)
         
         result = await service.get_next_class(str(current_user._id))
@@ -621,7 +621,7 @@ async def update_schedule(
 ):
     """Update schedule with validation and conflict detection"""
     try:
-        db = get_database()
+        db = await get_database()
         service = ScheduleService(db)
         
         result = await service.update_schedule(schedule_id, schedule_update, str(current_user._id))
@@ -643,7 +643,7 @@ async def delete_schedule(
 ):
     """Delete schedule (soft delete)"""
     try:
-        db = get_database()
+        db = await get_database()
         service = ScheduleService(db)
         
         result = await service.delete_schedule(schedule_id, str(current_user._id))
@@ -664,7 +664,7 @@ async def get_notifications(
 ):
     """Get user's notification settings and upcoming notifications"""
     try:
-        db = get_database()
+        db = await get_database()
         service = ScheduleService(db)
         
         result = await service.get_notifications(str(current_user._id))
@@ -686,7 +686,7 @@ async def update_notifications(
 ):
     """Update user's notification settings"""
     try:
-        db = get_database()
+        db = await get_database()
         service = ScheduleService(db)
         
         result = await service.update_notifications(str(current_user._id), settings)

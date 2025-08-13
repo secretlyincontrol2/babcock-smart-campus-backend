@@ -508,7 +508,7 @@ async def get_locations(
         # Rate limiting
         check_rate_limit(str(current_user._id), "get_locations")
         
-        db = get_database()
+        db = await get_database()
         service = MapsService(db)
         
         locations = await service.get_locations(
@@ -539,7 +539,7 @@ async def get_location_by_id(
         # Rate limiting
         check_rate_limit(str(current_user._id), "get_location_by_id")
         
-        db = get_database()
+        db = await get_database()
         service = MapsService(db)
         
         location = await service.get_location_by_id(location_id)
@@ -569,7 +569,7 @@ async def create_location(
         if current_user.role not in ["user", "admin"]:
             raise AuthorizationError("Insufficient privileges to create locations")
         
-        db = get_database()
+        db = await get_database()
         service = MapsService(db)
         
         new_location = await service.create_location(location_data, str(current_user._id))
@@ -600,7 +600,7 @@ async def update_location(
         # Rate limiting
         check_rate_limit(str(current_user._id), "update_location", max_requests=20, window_minutes=5)
         
-        db = get_database()
+        db = await get_database()
         service = MapsService(db)
         
         updated_location = await service.update_location(location_id, location_data, str(current_user._id))
@@ -625,7 +625,7 @@ async def delete_location(
         # Rate limiting
         check_rate_limit(str(current_user._id), "delete_location", max_requests=5, window_minutes=5)
         
-        db = get_database()
+        db = await get_database()
         service = MapsService(db)
         
         await service.delete_location(location_id, str(current_user._id))
@@ -654,7 +654,7 @@ async def get_nearby_locations(
         # Rate limiting
         check_rate_limit(str(current_user._id), "get_nearby_locations")
         
-        db = get_database()
+        db = await get_database()
         service = MapsService(db)
         
         nearby_locations = await service.get_nearby_locations(
@@ -690,7 +690,7 @@ async def get_directions(
         # Rate limiting
         check_rate_limit(str(current_user._id), "get_directions")
         
-        db = get_database()
+        db = await get_database()
         service = MapsService(db)
         
         directions = await service.get_directions(
@@ -721,7 +721,7 @@ async def get_campus_info(
         # Rate limiting
         check_rate_limit(str(current_user._id), "get_campus_info")
         
-        db = get_database()
+        db = await get_database()
         service = MapsService(db)
         
         campus_info = await service.get_campus_info()

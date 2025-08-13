@@ -122,6 +122,24 @@ class ExternalServiceError(CustomHTTPException):
             error_type="external_service_error"
         )
 
+class QRCodeExpiredError(CustomHTTPException):
+    """QR code expired exception"""
+    def __init__(self, message: str = "QR code has expired"):
+        super().__init__(
+            status_code=status.HTTP_410_GONE,
+            detail=message,
+            error_type="qr_code_expired"
+        )
+
+class DuplicateAttendanceError(CustomHTTPException):
+    """Duplicate attendance exception"""
+    def __init__(self, message: str = "Attendance already marked"):
+        super().__init__(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=message,
+            error_type="duplicate_attendance"
+        )
+
 # Utility functions for raising exceptions
 def raise_validation_error(message: str, field: str = None, value: Any = None):
     """Raise a validation error"""

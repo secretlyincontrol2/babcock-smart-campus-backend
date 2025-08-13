@@ -456,7 +456,7 @@ async def get_cafeterias(
 ):
     """Get all cafeterias with basic information"""
     try:
-        db = get_database()
+        db = await get_database()
         service = CafeteriaService(db)
         
         result = await service.get_cafeterias(is_active=active_only)
@@ -493,7 +493,7 @@ async def get_cafeteria_menu(
         if dietary:
             dietary_restrictions = [d.strip() for d in dietary.split(",")]
         
-        db = get_database()
+        db = await get_database()
         service = CafeteriaService(db)
         
         result = await service.get_cafeteria_menu(
@@ -514,7 +514,7 @@ async def get_cafeteria_menu(
 async def get_menu_categories():
     """Get all available menu categories with item counts and average prices"""
     try:
-        db = get_database()
+        db = await get_database()
         service = CafeteriaService(db)
         
         result = await service.get_menu_categories()
@@ -545,7 +545,7 @@ async def search_menu(
         if dietary:
             dietary_restrictions = [d.strip() for d in dietary.split(",")]
         
-        db = get_database()
+        db = await get_database()
         service = CafeteriaService(db)
         
         result = await service.search_menu(
@@ -577,7 +577,7 @@ async def get_vegetarian_menu(
             except ValueError:
                 raise ValidationError("Invalid date format. Use YYYY-MM-DD", "date", date)
         
-        db = get_database()
+        db = await get_database()
         service = CafeteriaService(db)
         
         result = await service.get_vegetarian_menu(cafeteria_id, date_filter)
@@ -607,7 +607,7 @@ async def get_halal_menu(
             except ValueError:
                 raise ValidationError("Invalid date format. Use YYYY-MM-DD", "date", date)
         
-        db = get_database()
+        db = await get_database()
         service = CafeteriaService(db)
         
         result = await service.get_halal_menu(cafeteria_id, date_filter)
@@ -628,7 +628,7 @@ async def get_todays_special(
 ):
     """Get today's special menu items"""
     try:
-        db = get_database()
+        db = await get_database()
         service = CafeteriaService(db)
         
         result = await service.get_todays_special(cafeteria_id)
@@ -650,7 +650,7 @@ async def get_cafeteria_stats(
 ):
     """Get comprehensive cafeteria statistics"""
     try:
-        db = get_database()
+        db = await get_database()
         service = CafeteriaService(db)
         
         result = await service.get_cafeteria_stats(cafeteria_id)
