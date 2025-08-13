@@ -1,11 +1,8 @@
 """
-Vercel entrypoint for Flask app using vercel-wsgi adapter.
+Vercel entrypoint for Flask app.
+Expose the Flask WSGI app as `app` for @vercel/python.
 """
 
-from vercel_wsgi import make_wsgi_handler
-from app.flask_main import app
-
-# Vercel expects `handler` as the entrypoint
-handler = make_wsgi_handler(app)
+from app.flask_main import app  # Vercel detects `app` symbol
 
 
