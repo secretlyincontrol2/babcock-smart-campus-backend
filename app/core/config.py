@@ -14,6 +14,8 @@ class Settings:
         # Security
         self.SECRET_KEY: str = os.getenv("SECRET_KEY", "smart-campus-app-secret-key-2024-babcock-university")
         self.ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+        self.REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
+        self.JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
         
         # Google Maps API
         self.GOOGLE_MAPS_API_KEY: str = os.getenv("GOOGLE_MAPS_API_KEY", "AIzaSyAa-XKO4DH_CLf647SMZYypDOfk0d1SBUE")
