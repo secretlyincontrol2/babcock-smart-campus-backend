@@ -13,7 +13,6 @@ import os
 
 from .core.config import settings
 from .database import connect_to_mongo, close_mongo_connection, check_database_health
-from .routers import auth, users, attendance, cafeteria, maps, schedule, chat
 from .core.exceptions import CustomHTTPException
 
 # Configure logging
