@@ -2,23 +2,23 @@ services:
   - type: web
     name: babcock-smart-campus-backend
     env: python
-    plan: free
     region: oregon
+    plan: free
     buildCommand: |
-      pip install --upgrade pip
+      python -m pip install --upgrade pip
       pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1
     envVars:
       - key: PYTHON_VERSION
-        value: 3.10
+        value: 3.7.16
       - key: DEMO_MODE
-        value: false
+        value: true
       - key: DEBUG
         value: false
       - key: MONGODB_URI
         sync: false
       - key: MONGODB_DATABASE
-        value: smart_campus
+        value: babcock_smart_campus
       - key: JWT_SECRET_KEY
         sync: false
       - key: JWT_ALGORITHM
