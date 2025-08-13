@@ -36,14 +36,17 @@ def create_app():
     jwt = JWTManager(app)
     CORS(app, origins=settings.ALLOWED_ORIGINS, supports_credentials=True)
     
-    # Startup and shutdown events
-    @app.before_first_request
-    def startup():
-        """Application startup"""
+    # Startup initialization (Flask 3 compatible)
+    app.config.setdefault('APP_INITIALIZED', False)
+
+    @app.before_request
+    def ensure_initialized():
+        """Initialize app resources on the first incoming request"""
+        if app.config.get('APP_INITIALIZED'):
+            return
         startup_time = time.time()
         try:
-            logger.info("🚀 Starting Smart Campus App...")
-            
+            logger.info("🚀 Initializing Smart Campus App...")
             if not settings.DEMO_MODE:
                 try:
                     connect_to_mongo()
@@ -54,12 +57,12 @@ def create_app():
             else:
                 logger.info("🎭 Running in DEMO MODE - MongoDB connection skipped")
                 logger.info("📝 Demo mode enabled - using mock data and limited features")
-            
             startup_duration = time.time() - startup_time
-            logger.info(f"✅ Application startup completed successfully in {startup_duration:.2f}s")
+            logger.info(f"✅ Initialization completed in {startup_duration:.2f}s")
+            app.config['APP_INITIALIZED'] = True
         except Exception as e:
             startup_duration = time.time() - startup_time
-            logger.error(f"❌ Application startup failed after {startup_duration:.2f}s: {e}")
+            logger.error(f"❌ Initialization failed after {startup_duration:.2f}s: {e}")
     
     @app.teardown_appcontext
     def shutdown(exception=None):
