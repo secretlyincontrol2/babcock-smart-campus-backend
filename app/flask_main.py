@@ -131,6 +131,28 @@ def create_app():
             "debug": settings.DEBUG
         })
     
+    # Root endpoint
+    @app.route('/', methods=['GET'])
+    def root():
+        """Root endpoint"""
+        return jsonify({
+            "message": "Welcome to Smart Campus App API",
+            "version": settings.APP_VERSION,
+            "university": "Babcock University",
+            "status": "operational",
+            "endpoints": {
+                "health": "/health",
+                "info": "/info",
+                "auth": "/auth",
+                "users": "/users",
+                "attendance": "/attendance",
+                "cafeteria": "/cafeteria",
+                "maps": "/maps",
+                "schedule": "/schedule",
+                "chat": "/chat"
+            }
+        })
+    
     # Register blueprints (routes)
     from .routers.flask_auth import auth_bp
     from .routers.flask_users import users_bp
