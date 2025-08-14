@@ -43,8 +43,8 @@ class Settings:
         self.DEBUG: bool = os.getenv("DEBUG", "False").lower() == "true"
         self.DEMO_MODE: bool = os.getenv("DEMO_MODE", "False").lower() == "true"
         
-        # CORS Settings - Configure for production with specific origins
-        cors_origins = os.getenv("ALLOWED_ORIGINS", "https://babcock-smart-campus-frontend.onrender.com")
+        # CORS Settings - Allow all origins for development
+        cors_origins = os.getenv("ALLOWED_ORIGINS", "*")
         if cors_origins == "*":
             self.ALLOWED_ORIGINS = ["*"]
         else:
