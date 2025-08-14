@@ -82,6 +82,28 @@ def create_app():
             "extra_data": getattr(error, 'extra_data', {})
         }), error.status_code
     
+    @app.errorhandler(404)
+    def not_found(error):
+        """Handle 404 errors"""
+        return jsonify({
+            "error": "Endpoint not found",
+            "error_type": "not_found",
+            "message": "The requested endpoint does not exist",
+            "available_endpoints": {
+                "root": "/",
+                "health": "/health",
+                "info": "/info",
+                "docs": "/docs",
+                "auth": "/auth/login, /auth/register",
+                "users": "/users/profile",
+                "attendance": "/attendance/generate-qr",
+                "cafeteria": "/cafeteria/menu",
+                "maps": "/maps/locations",
+                "schedule": "/schedule/classes",
+                "chat": "/chat/conversations"
+            }
+        }), 404
+    
     @app.errorhandler(Exception)
     def handle_general_exception(error):
         logger.error(f"Unhandled exception: {error}")
@@ -119,7 +141,6 @@ def create_app():
         except Exception as e:
             return jsonify({"error": str(e)}), 500
     
-    # Info endpoint
     @app.route('/info', methods=['GET'])
     def app_info():
         """Application information"""
@@ -131,7 +152,6 @@ def create_app():
             "debug": settings.DEBUG
         })
     
-    # Root endpoint
     @app.route('/', methods=['GET'])
     def root():
         """Root endpoint"""
@@ -212,26 +232,76 @@ def create_app():
     
     # Register blueprints (routes)
     try:
+        logger.info("🔄 Starting Flask blueprint registration...")
+        
         from .routers.flask_auth import auth_bp
+        logger.info("✅ Auth blueprint imported successfully")
+        
         from .routers.flask_users import users_bp
+        logger.info("✅ Users blueprint imported successfully")
+        
         from .routers.flask_attendance import attendance_bp
+        logger.info("✅ Attendance blueprint imported successfully")
+        
         from .routers.flask_cafeteria import cafeteria_bp
+        logger.info("✅ Cafeteria blueprint imported successfully")
+        
         from .routers.flask_maps import maps_bp
+        logger.info("✅ Maps blueprint imported successfully")
+        
         from .routers.flask_schedule import schedule_bp
+        logger.info("✅ Schedule blueprint imported successfully")
+        
         from .routers.flask_chat import chat_bp
+        logger.info("✅ Chat blueprint imported successfully")
         
-        app.register_blueprint(auth_bp, url_prefix='/auth')
-        app.register_blueprint(users_bp, url_prefix='/users')
-        app.register_blueprint(attendance_bp, url_prefix='/attendance')
-        app.register_blueprint(cafeteria_bp, url_prefix='/cafeteria')
-        app.register_blueprint(maps_bp, url_prefix='/maps')
-        app.register_blueprint(schedule_bp, url_prefix='/schedule')
-        app.register_blueprint(chat_bp, url_prefix='/chat')
+        # Register each blueprint individually with error handling
+        try:
+            app.register_blueprint(auth_bp, url_prefix='/auth')
+            logger.info("✅ Auth blueprint registered successfully")
+        except Exception as e:
+            logger.error(f"❌ Failed to register auth blueprint: {e}")
         
-        logger.info("✅ All Flask blueprints registered successfully")
+        try:
+            app.register_blueprint(users_bp, url_prefix='/users')
+            logger.info("✅ Users blueprint registered successfully")
+        except Exception as e:
+            logger.error(f"❌ Failed to register users blueprint: {e}")
+        
+        try:
+            app.register_blueprint(attendance_bp, url_prefix='/attendance')
+            logger.info("✅ Attendance blueprint registered successfully")
+        except Exception as e:
+            logger.error(f"❌ Failed to register attendance blueprint: {e}")
+        
+        try:
+            app.register_blueprint(cafeteria_bp, url_prefix='/cafeteria')
+            logger.info("✅ Cafeteria blueprint registered successfully")
+        except Exception as e:
+            logger.error(f"❌ Failed to register cafeteria blueprint: {e}")
+        
+        try:
+            app.register_blueprint(maps_bp, url_prefix='/maps')
+            logger.info("✅ Maps blueprint registered successfully")
+        except Exception as e:
+            logger.error(f"❌ Failed to register maps blueprint: {e}")
+        
+        try:
+            app.register_blueprint(schedule_bp, url_prefix='/schedule')
+            logger.info("✅ Schedule blueprint registered successfully")
+        except Exception as e:
+            logger.error(f"❌ Failed to register schedule blueprint: {e}")
+        
+        try:
+            app.register_blueprint(chat_bp, url_prefix='/chat')
+            logger.info("✅ Chat blueprint registered successfully")
+        except Exception as e:
+            logger.error(f"❌ Failed to register chat blueprint: {e}")
+        
+        logger.info("✅ All Flask blueprints registration completed")
         
     except Exception as e:
-        logger.error(f"❌ Error registering Flask blueprints: {e}")
+        logger.error(f"❌ Error during Flask blueprint registration: {e}")
         logger.error(f"❌ Error type: {type(e).__name__}")
         import traceback
         logger.error(f"❌ Traceback: {traceback.format_exc()}")
