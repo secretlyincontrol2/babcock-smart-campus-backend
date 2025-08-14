@@ -143,6 +143,7 @@ def create_app():
             "endpoints": {
                 "health": "/health",
                 "info": "/info",
+                "docs": "/docs",
                 "auth": "/auth",
                 "users": "/users",
                 "attendance": "/attendance",
@@ -153,22 +154,88 @@ def create_app():
             }
         })
     
-    # Register blueprints (routes)
-    from .routers.flask_auth import auth_bp
-    from .routers.flask_users import users_bp
-    from .routers.flask_attendance import attendance_bp
-    from .routers.flask_cafeteria import cafeteria_bp
-    from .routers.flask_maps import maps_bp
-    from .routers.flask_schedule import schedule_bp
-    from .routers.flask_chat import chat_bp
+    # Documentation endpoint
+    @app.route('/docs', methods=['GET'])
+    def api_docs():
+        """API Documentation endpoint"""
+        return jsonify({
+            "title": "Smart Campus App API Documentation",
+            "version": settings.APP_VERSION,
+            "description": "API for Babcock University Smart Campus App",
+            "base_url": request.url_root.rstrip('/'),
+            "endpoints": {
+                "authentication": {
+                    "POST /auth/register": "Register a new user",
+                    "POST /auth/login": "User login",
+                    "POST /auth/refresh": "Refresh access token",
+                    "POST /auth/logout": "User logout"
+                },
+                "users": {
+                    "GET /users/profile": "Get user profile (requires auth)",
+                    "PUT /users/profile": "Update user profile (requires auth)",
+                    "GET /users/{id}": "Get user by ID (requires auth)"
+                },
+                "attendance": {
+                    "POST /attendance/generate-qr": "Generate QR code for attendance (requires auth)",
+                    "POST /attendance/mark": "Mark attendance using QR code (requires auth)",
+                    "GET /attendance/history": "Get attendance history (requires auth)"
+                },
+                "cafeteria": {
+                    "GET /cafeteria/menu": "Get cafeteria menu",
+                    "POST /cafeteria/order": "Place food order (requires auth)",
+                    "GET /cafeteria/orders": "Get user orders (requires auth)"
+                },
+                "maps": {
+                    "GET /maps/locations": "Get campus locations",
+                    "GET /maps/navigation": "Get navigation between points"
+                },
+                "schedule": {
+                    "GET /schedule/classes": "Get class schedule (requires auth)",
+                    "POST /schedule/add": "Add to schedule (requires auth)"
+                },
+                "chat": {
+                    "GET /chat/conversations": "Get chat conversations (requires auth)",
+                    "POST /chat/message": "Send message (requires auth)"
+                },
+                "system": {
+                    "GET /health": "Health check",
+                    "GET /info": "API information",
+                    "GET /db-status": "Database status"
+                }
+            },
+            "authentication": {
+                "type": "Bearer Token",
+                "header": "Authorization: Bearer <access_token>"
+            },
+            "demo_mode": settings.DEMO_MODE
+        })
     
-    app.register_blueprint(auth_bp, url_prefix='/auth')
-    app.register_blueprint(users_bp, url_prefix='/users')
-    app.register_blueprint(attendance_bp, url_prefix='/attendance')
-    app.register_blueprint(cafeteria_bp, url_prefix='/cafeteria')
-    app.register_blueprint(maps_bp, url_prefix='/maps')
-    app.register_blueprint(schedule_bp, url_prefix='/schedule')
-    app.register_blueprint(chat_bp, url_prefix='/chat')
+    # Register blueprints (routes)
+    try:
+        from .routers.flask_auth import auth_bp
+        from .routers.flask_users import users_bp
+        from .routers.flask_attendance import attendance_bp
+        from .routers.flask_cafeteria import cafeteria_bp
+        from .routers.flask_maps import maps_bp
+        from .routers.flask_schedule import schedule_bp
+        from .routers.flask_chat import chat_bp
+        
+        app.register_blueprint(auth_bp, url_prefix='/auth')
+        app.register_blueprint(users_bp, url_prefix='/users')
+        app.register_blueprint(attendance_bp, url_prefix='/attendance')
+        app.register_blueprint(cafeteria_bp, url_prefix='/cafeteria')
+        app.register_blueprint(maps_bp, url_prefix='/maps')
+        app.register_blueprint(schedule_bp, url_prefix='/schedule')
+        app.register_blueprint(chat_bp, url_prefix='/chat')
+        
+        logger.info("✅ All Flask blueprints registered successfully")
+        
+    except Exception as e:
+        logger.error(f"❌ Error registering Flask blueprints: {e}")
+        logger.error(f"❌ Error type: {type(e).__name__}")
+        import traceback
+        logger.error(f"❌ Traceback: {traceback.format_exc()}")
+        # Don't fail the app startup, just log the error
     
     return app
 
