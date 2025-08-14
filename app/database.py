@@ -1,9 +1,7 @@
-import asyncio
 import logging
 from typing import Optional, Dict, Any
-from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from pymongo import MongoClient
-from pymongo.database import Database as SyncDatabase
+from pymongo.database import Database
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError, OperationFailure
 from pymongo.server_api import ServerApi
 import time
@@ -17,8 +15,8 @@ class DatabaseManager:
     """Manages MongoDB database connections with connection pooling and retry logic"""
     
     def __init__(self):
-        self.client: Optional[AsyncIOMotorClient] = None
-        self.database: Optional[AsyncIOMotorDatabase] = None
+        self.client: Optional[MongoClient] = None
+        self.database: Optional[Database] = None
         self._connection_attempts = 0
         self._max_retries = 3
         self._retry_delay = 1  # seconds
@@ -26,7 +24,7 @@ class DatabaseManager:
         self._last_health_check = 0
         self._health_check_interval = 30  # seconds
         
-    async def connect(self) -> bool:
+    def connect(self) -> bool:
         """Establish connection to MongoDB with retry logic"""
         if self._is_connected and self.client:
             logger.info("Database already connected")
@@ -37,7 +35,7 @@ class DatabaseManager:
                 logger.info(f"Attempting to connect to MongoDB (attempt {attempt + 1}/{self._max_retries})")
                 
                 # Create client with optimized settings
-                self.client = AsyncIOMotorClient(
+                self.client = MongoClient(
                     settings.MONGODB_URL,
                     server_api=ServerApi('1'),
                     maxPoolSize=50,  # Connection pool size
@@ -52,20 +50,20 @@ class DatabaseManager:
                 )
                 
                 # Test connection
-                await self.client.admin.command('ping')
+                self.client.admin.command('ping')
                 
                 # Get database
                 self.database = self.client[settings.MONGODB_DATABASE]
                 
                 # Test database access
-                await self.database.command('ping')
+                self.database.command('ping')
                 
                 self._is_connected = True
                 self._connection_attempts = 0
                 logger.info(f"✅ Successfully connected to MongoDB database: {settings.MONGODB_DATABASE}")
                 
                 # Log connection info
-                await self._log_connection_info()
+                self._log_connection_info()
                 
                 return True
                 
@@ -76,7 +74,7 @@ class DatabaseManager:
                 if attempt < self._max_retries - 1:
                     wait_time = self._retry_delay * (2 ** attempt)  # Exponential backoff
                     logger.info(f"Waiting {wait_time}s before retry...")
-                    await asyncio.sleep(wait_time)
+                    time.sleep(wait_time)
                 else:
                     logger.error(f"❌ Failed to connect to MongoDB after {self._max_retries} attempts")
                     self._is_connected = False
@@ -89,7 +87,7 @@ class DatabaseManager:
         
         return False
     
-    async def disconnect(self):
+    def disconnect(self):
         """Close MongoDB connection"""
         try:
             if self.client:
@@ -101,229 +99,117 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Error closing MongoDB connection: {e}")
     
-    async def get_database(self) -> AsyncIOMotorDatabase:
-        """Get database instance, ensuring connection is established"""
+    def get_database(self) -> Database:
+        """Get database instance, connecting if necessary"""
         if not self._is_connected or not self.database:
-            await self.connect()
-        
-        if not self.database:
-            raise ConnectionError("Failed to establish database connection")
-        
+            if not self.connect():
+                raise ConnectionError("Failed to connect to MongoDB")
         return self.database
     
-    async def ensure_connection(self) -> bool:
-        """Ensure database connection is active, reconnect if necessary"""
-        if not self._is_connected:
-            return await self.connect()
+    def is_connected(self) -> bool:
+        """Check if database is connected"""
+        if not self._is_connected or not self.client:
+            return False
         
         try:
-            # Quick ping to check if connection is still alive
-            await self.client.admin.command('ping')
+            # Ping to check if connection is still alive
+            self.client.admin.command('ping')
             return True
         except Exception:
-            logger.warning("Database connection lost, attempting to reconnect...")
-            return await self.connect()
+            self._is_connected = False
+            return False
     
-    async def check_health(self) -> Dict[str, Any]:
-        """Comprehensive health check of the database connection"""
+    def check_health(self) -> Dict[str, Any]:
+        """Check database health status"""
         current_time = time.time()
         
-        # Rate limit health checks
+        # Only check health if enough time has passed
         if current_time - self._last_health_check < self._health_check_interval:
             return {
-                "status": "healthy" if self._is_connected else "unhealthy",
-                "cached": True,
-                "last_check": self._last_health_check
+                "status": "healthy" if self._is_connected else "disconnected",
+                "last_check": self._last_health_check,
+                "connection_attempts": self._connection_attempts
             }
         
         try:
-            start_time = time.time()
-            
-            if not self._is_connected:
+            if not self.is_connected():
                 return {
-                    "status": "unhealthy",
-                    "message": "Not connected to database",
-                    "response_time": 0,
-                    "timestamp": current_time
+                    "status": "disconnected",
+                    "last_check": current_time,
+                    "connection_attempts": self._connection_attempts,
+                    "error": "Database not connected"
                 }
             
-            # Test connection with ping
-            await self.client.admin.command('ping')
-            response_time = time.time() - start_time
+            # Test database operations
+            start_time = time.time()
+            self.database.command('ping')
+            ping_time = (time.time() - start_time) * 1000  # Convert to milliseconds
             
-            # Test database access
-            await self.database.command('ping')
-            
-            # Get database stats
-            stats = await self.database.command('dbStats')
+            # Check collection count (lightweight operation)
+            start_time = time.time()
+            user_count = self.database.users.count_documents({})
+            count_time = (time.time() - start_time) * 1000
             
             self._last_health_check = current_time
             
             return {
                 "status": "healthy",
-                "message": "Database is accessible",
-                "response_time": f"{response_time:.3f}s",
-                "timestamp": current_time,
-                "stats": {
-                    "collections": stats.get('collections', 0),
-                    "data_size": stats.get('dataSize', 0),
-                    "storage_size": stats.get('storageSize', 0),
-                    "indexes": stats.get('indexes', 0)
-                }
+                "last_check": current_time,
+                "ping_time_ms": round(ping_time, 2),
+                "user_count": user_count,
+                "count_time_ms": round(count_time, 2),
+                "connection_attempts": self._connection_attempts,
+                "database_name": settings.MONGODB_DATABASE
             }
             
         except Exception as e:
-            logger.error(f"Database health check failed: {e}")
+            self._last_health_check = current_time
             return {
                 "status": "unhealthy",
-                "message": f"Health check failed: {str(e)}",
-                "response_time": 0,
-                "timestamp": current_time,
-                "error": str(e)
+                "last_check": current_time,
+                "error": str(e),
+                "connection_attempts": self._connection_attempts
             }
     
-    async def ping(self) -> bool:
-        """Simple ping to check if database is accessible"""
-        try:
-            if not self._is_connected:
-                return False
-            await self.client.admin.command('ping')
-            return True
-        except Exception:
-            return False
-    
-    async def _log_connection_info(self):
+    def _log_connection_info(self):
         """Log detailed connection information"""
         try:
-            if self.client:
+            if self.client and self.database:
                 # Get server info
-                server_info = await self.client.admin.command('serverStatus')
-                logger.info(f"Connected to MongoDB server: {server_info.get('host', 'unknown')}")
-                logger.info(f"MongoDB version: {server_info.get('version', 'unknown')}")
-                logger.info(f"Connection pool size: {self.client.max_pool_size}")
+                server_info = self.client.server_info()
+                
+                # Get database stats
+                db_stats = self.database.command('dbStats')
+                
+                logger.info(f"📊 MongoDB Server Version: {server_info.get('version', 'Unknown')}")
+                logger.info(f"📊 Database: {settings.MONGODB_DATABASE}")
+                logger.info(f"📊 Collections: {db_stats.get('collections', 0)}")
+                logger.info(f"📊 Documents: {db_stats.get('objects', 0)}")
+                logger.info(f"📊 Data Size: {db_stats.get('dataSize', 0) / (1024*1024):.2f} MB")
+                logger.info(f"📊 Storage Size: {db_stats.get('storageSize', 0) / (1024*1024):.2f} MB")
+                
         except Exception as e:
-            logger.warning(f"Could not log connection info: {e}")
+            logger.warning(f"Could not log detailed connection info: {e}")
 
 # Global database manager instance
 db_manager = DatabaseManager()
 
-# ------------------------------
-# Synchronous Database (for Flask)
-# ------------------------------
-
-class SyncDatabaseManager:
-    """Synchronous MongoDB manager for Flask routes and lifecycle"""
-    def __init__(self):
-        self.client: Optional[MongoClient] = None
-        self.database: Optional[SyncDatabase] = None
-        self._is_connected: bool = False
-
-    def connect(self) -> bool:
-        try:
-            if self._is_connected and self.client:
-                return True
-            self.client = MongoClient(settings.MONGODB_URL, server_api=ServerApi('1'))
-            # Ping
-            self.client.admin.command('ping')
-            self.database = self.client[settings.MONGODB_DATABASE]
-            self.database.command('ping')
-            self._is_connected = True
-            logger.info(f"✅ [SYNC] Connected to MongoDB database: {settings.MONGODB_DATABASE}")
-            return True
-        except Exception as e:
-            logger.error(f"❌ [SYNC] MongoDB connection failed: {e}")
-            self._is_connected = False
-            return False
-
-    def disconnect(self):
-        try:
-            if self.client:
-                self.client.close()
-            self.client = None
-            self.database = None
-            self._is_connected = False
-            logger.info("[SYNC] MongoDB client connection closed")
-        except Exception as e:
-            logger.error(f"[SYNC] Error closing MongoDB connection: {e}")
-
-    def get_database(self) -> SyncDatabase:
-        if not self._is_connected or not self.database:
-            self.connect()
-        if not self.database:
-            raise ConnectionError("Failed to establish database connection (sync)")
-        return self.database
-
-    def check_health(self) -> Dict[str, Any]:
-        try:
-            if not self._is_connected:
-                return {"status": "unhealthy", "message": "Not connected"}
-            self.client.admin.command('ping')
-            self.database.command('ping')
-            return {"status": "healthy", "database": settings.MONGODB_DATABASE}
-        except Exception as e:
-            return {"status": "unhealthy", "message": str(e)}
-
-    def ping(self) -> bool:
-        try:
-            if not self._is_connected:
-                return False
-            self.client.admin.command('ping')
-            return True
-        except Exception:
-            return False
-
-
-sync_db_manager = SyncDatabaseManager()
-
-# Convenience functions (SYNC for Flask)
 def connect_to_mongo() -> bool:
-    return sync_db_manager.connect()
+    """Connect to MongoDB"""
+    return db_manager.connect()
 
 def close_mongo_connection():
-    sync_db_manager.disconnect()
+    """Close MongoDB connection"""
+    db_manager.disconnect()
 
-def get_database():
-    return sync_db_manager.get_database()
-
-def ensure_connection() -> bool:
-    return sync_db_manager.connect()
+def get_database() -> Database:
+    """Get database instance"""
+    return db_manager.get_database()
 
 def check_database_health() -> Dict[str, Any]:
-    return sync_db_manager.check_health()
+    """Check database health"""
+    return db_manager.check_health()
 
-def ping_database() -> bool:
-    return sync_db_manager.ping()
-
-# Async convenience functions (retained for backward compatibility)
-async def connect_to_mongo_async() -> bool:
-    return await db_manager.connect()
-
-async def close_mongo_connection_async():
-    await db_manager.disconnect()
-
-async def get_database_async():
-    return await db_manager.get_database()
-
-async def ensure_connection_async() -> bool:
-    return await db_manager.ensure_connection()
-
-async def check_database_health_async() -> Dict[str, Any]:
-    return await db_manager.check_health()
-
-async def ping_database_async() -> bool:
-    return await db_manager.ping()
-
-# Database collections
-def get_collection(collection_name: str):
-    """Get a specific collection from the database"""
-    db_sync = sync_db_manager.get_database()
-    return db_sync[collection_name]
-
-# Collection names as constants
-USERS_COLLECTION = "users"
-ATTENDANCE_COLLECTION = "attendance"
-CAFETERIA_COLLECTION = "cafeteria"
-LOCATIONS_COLLECTION = "locations"
-SCHEDULES_COLLECTION = "schedules"
-CHAT_COLLECTION = "chat"
-MESSAGES_COLLECTION = "messages"
+def is_database_connected() -> bool:
+    """Check if database is connected"""
+    return db_manager.is_connected()
