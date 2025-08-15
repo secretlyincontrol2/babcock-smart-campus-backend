@@ -230,6 +230,46 @@ def create_app():
             "demo_mode": settings.DEMO_MODE
         })
     
+    # Test endpoint to verify app is working
+    @app.route('/test', methods=['GET'])
+    def test_endpoint():
+        """Simple test endpoint to verify app is working"""
+        return jsonify({
+            "message": "Backend is working!",
+            "status": "success",
+            "timestamp": datetime.now().isoformat()
+        })
+    
+    # Simple auth test endpoint
+    @app.route('/auth-test', methods=['GET'])
+    def auth_test():
+        """Test auth endpoint to verify routing is working"""
+        return jsonify({
+            "message": "Auth endpoint is accessible!",
+            "status": "success",
+            "available_auth_endpoints": [
+                "/auth/register",
+                "/auth/login", 
+                "/auth/refresh",
+                "/auth/me"
+            ]
+        })
+    
+    # Request debugging middleware
+    @app.before_request
+    def log_request_info():
+        """Log all incoming requests for debugging"""
+        logger.info(f"🌐 Request: {request.method} {request.path}")
+        logger.info(f"🌐 Headers: {dict(request.headers)}")
+        if request.is_json:
+            logger.info(f"🌐 JSON Data: {request.get_json()}")
+    
+    @app.after_request
+    def log_response_info(response):
+        """Log all outgoing responses for debugging"""
+        logger.info(f"📤 Response: {response.status_code} - {response.get_data(as_text=True)[:200]}")
+        return response
+    
     # Register blueprints (routes)
     try:
         logger.info("🔄 Starting Flask blueprint registration...")
