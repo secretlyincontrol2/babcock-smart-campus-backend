@@ -37,10 +37,10 @@ def register():
         if existing_user:
             raise CustomHTTPException(400, "User with this email already exists")
         
-        # Create user document
+        # Create user document with modern password hashing
         user_doc = {
             "email": data['email'],
-            "password_hash": generate_password_hash(data['password']),
+            "password_hash": generate_password_hash(data['password'], method='scrypt'),
             "full_name": data['full_name'],
             "student_id": data['student_id'],
             "department": data['department'],
@@ -127,6 +127,42 @@ def login():
     except Exception as e:
         logger.error(f"Login error: {e}")
         raise CustomHTTPException(500, "Internal server error")
+
+@auth_bp.route('/login', methods=['GET'])
+def login_get():
+    """Handle GET requests to login endpoint"""
+    return jsonify({
+        "error": "Method not allowed",
+        "message": "Use POST method for login",
+        "example": {
+            "method": "POST",
+            "url": "/auth/login",
+            "body": {
+                "email": "user@example.com",
+                "password": "password123"
+            }
+        }
+    }), 405
+
+@auth_bp.route('/register', methods=['GET'])
+def register_get():
+    """Handle GET requests to register endpoint"""
+    return jsonify({
+        "error": "Method not allowed",
+        "message": "Use POST method for registration",
+        "example": {
+            "method": "POST",
+            "url": "/auth/register",
+            "body": {
+                "email": "user@example.com",
+                "password": "password123",
+                "full_name": "John Doe",
+                "student_id": "BU2024001",
+                "department": "Computer Science",
+                "level": "300"
+            }
+        }
+    }), 405
 
 @auth_bp.route('/refresh', methods=['POST'])
 @jwt_required(refresh=True)
