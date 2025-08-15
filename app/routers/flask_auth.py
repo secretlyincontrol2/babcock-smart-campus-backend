@@ -208,7 +208,21 @@ def refresh():
         
     except Exception as e:
         logger.error(f"Token refresh error: {e}")
-        raise CustomHTTPException(500, "Internal server error")
+        logger.error(f"Error type: {type(e).__name__}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        
+        # Handle specific JWT errors
+        if "Invalid token" in str(e) or "Token has expired" in str(e):
+            return jsonify({
+                "error": "Invalid or expired refresh token",
+                "message": "Please login again to get a new refresh token"
+            }), 401
+        else:
+            return jsonify({
+                "error": "Token refresh failed",
+                "message": "An error occurred while refreshing the token"
+            }), 500
 
 @auth_bp.route('/me', methods=['GET'])
 @jwt_required()

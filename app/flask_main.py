@@ -76,6 +76,7 @@ def create_app():
     # Global exception handler
     @app.errorhandler(CustomHTTPException)
     def handle_custom_exception(error):
+        logger.error(f"CustomHTTPException: {error.detail} (Status: {error.status_code})")
         return jsonify({
             "error": error.detail,
             "error_type": getattr(error, 'error_type', 'general_error'),
@@ -85,6 +86,7 @@ def create_app():
     @app.errorhandler(404)
     def not_found(error):
         """Handle 404 errors"""
+        logger.info(f"404 Not Found: {request.path}")
         return jsonify({
             "error": "Endpoint not found",
             "error_type": "not_found",
@@ -107,9 +109,13 @@ def create_app():
     @app.errorhandler(Exception)
     def handle_general_exception(error):
         logger.error(f"Unhandled exception: {error}")
+        logger.error(f"Exception type: {type(error).__name__}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return jsonify({
             "error": "Internal server error",
-            "error_type": "internal_error"
+            "error_type": "internal_error",
+            "message": str(error) if settings.DEBUG else "An unexpected error occurred"
         }), 500
     
     # Health check endpoint
@@ -240,19 +246,53 @@ def create_app():
             "timestamp": datetime.now().isoformat()
         })
     
-    # Simple auth test endpoint
-    @app.route('/auth-test', methods=['GET'])
-    def auth_test():
-        """Test auth endpoint to verify routing is working"""
+    # Simple auth test endpoint without database
+    @app.route('/auth-simple', methods=['POST'])
+    def auth_simple():
+        """Simple auth test that doesn't use database"""
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({"error": "No JSON data provided"}), 400
+            
+            email = data.get('email', '')
+            password = data.get('password', '')
+            
+            if not email or not password:
+                return jsonify({"error": "Email and password required"}), 400
+            
+            # Simple validation without database
+            if email == "test@babcock.edu" and password == "test123":
+                return jsonify({
+                    "message": "Simple auth test successful!",
+                    "user": {"email": email, "full_name": "Test User"},
+                    "access_token": "test_token_123",
+                    "refresh_token": "test_refresh_123"
+                }), 200
+            else:
+                return jsonify({"error": "Invalid credentials"}), 401
+                
+        except Exception as e:
+            logger.error(f"Error in simple auth: {e}")
+            return jsonify({"error": str(e)}), 500
+    
+    # Test endpoint to create a test user and test login
+    @app.route('/test-auth', methods=['GET'])
+    def test_auth():
+        """Test endpoint to verify auth system is working"""
         return jsonify({
-            "message": "Auth endpoint is accessible!",
-            "status": "success",
-            "available_auth_endpoints": [
-                "/auth/register",
-                "/auth/login", 
-                "/auth/refresh",
-                "/auth/me"
-            ]
+            "message": "Auth system test endpoint",
+            "status": "working",
+            "test_credentials": {
+                "email": "test@babcock.edu",
+                "password": "test123"
+            },
+            "endpoints": {
+                "simple_test": "POST /auth-simple",
+                "real_login": "POST /auth/login",
+                "real_register": "POST /auth/register"
+            },
+            "instructions": "Use POST method with JSON body containing email and password"
         })
     
     # Request debugging middleware
