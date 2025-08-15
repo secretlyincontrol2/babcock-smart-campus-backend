@@ -95,9 +95,39 @@ def login():
         if not user:
             raise CustomHTTPException(401, "Invalid credentials")
         
-        # Check password
-        if not check_password_hash(user['password_hash'], data['password']):
+        # Check password - handle both old and new hash methods
+        try:
+            # Try modern scrypt method first
+            if check_password_hash(user['password_hash'], data['password']):
+                password_valid = True
+            else:
+                password_valid = False
+        except Exception as e:
+            logger.warning(f"Password check failed with modern method, trying legacy: {e}")
+            # Fallback to legacy method for old password hashes
+            try:
+                from werkzeug.security import check_password_hash as legacy_check
+                password_valid = legacy_check(user['password_hash'], data['password'])
+            except Exception as legacy_error:
+                logger.error(f"Legacy password check also failed: {legacy_error}")
+                password_valid = False
+        
+        if not password_valid:
             raise CustomHTTPException(401, "Invalid credentials")
+        
+        # If password is valid and using old hash method, migrate to new method
+        if password_valid and not user['password_hash'].startswith('scrypt$'):
+            try:
+                logger.info(f"Migrating password hash for user: {data['email']}")
+                new_hash = generate_password_hash(data['password'], method='scrypt')
+                db.users.update_one(
+                    {"_id": user['_id']}, 
+                    {"$set": {"password_hash": new_hash, "updated_at": datetime.utcnow()}}
+                )
+                logger.info(f"Password hash migrated successfully for user: {data['email']}")
+            except Exception as migration_error:
+                logger.warning(f"Password migration failed for user {data['email']}: {migration_error}")
+                # Continue with login even if migration fails
         
         if not user.get('is_active', True):
             raise CustomHTTPException(401, "Account is deactivated")
