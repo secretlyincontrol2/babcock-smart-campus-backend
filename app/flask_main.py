@@ -32,9 +32,46 @@ def create_app():
     app.config['JWT_ACCESS_TOKEN_EXPIRES'] = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
     app.config['JWT_REFRESH_TOKEN_EXPIRES'] = settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
     
+    # Additional JWT configuration for consistency
+    app.config['JWT_TOKEN_LOCATION'] = ['headers']
+    app.config['JWT_HEADER_NAME'] = 'Authorization'
+    app.config['JWT_HEADER_TYPE'] = 'Bearer'
+    app.config['JWT_ERROR_MESSAGE_KEY'] = 'message'
+    app.config['JWT_BLACKLIST_ENABLED'] = False
+    app.config['JWT_BLACKLIST_TOKEN_CHECKS'] = ['access', 'refresh']
+    
     # Initialize extensions
     jwt = JWTManager(app)
     CORS(app, origins=settings.ALLOWED_ORIGINS, supports_credentials=True)
+    
+    # JWT Error Handlers
+    @jwt.expired_token_loader
+    def expired_token_callback(jwt_header, jwt_payload):
+        return jsonify({
+            "error": "Token has expired",
+            "message": "The token has expired, please login again"
+        }), 401
+    
+    @jwt.invalid_token_loader
+    def invalid_token_callback(error):
+        return jsonify({
+            "error": "Invalid token",
+            "message": "The token is invalid or malformed"
+        }), 422
+    
+    @jwt.unauthorized_loader
+    def missing_token_callback(error):
+        return jsonify({
+            "error": "Authorization required",
+            "message": "Request does not contain an access token"
+        }), 401
+    
+    @jwt.needs_fresh_token_loader
+    def token_not_fresh_callback(jwt_header, jwt_payload):
+        return jsonify({
+            "error": "Fresh token required",
+            "message": "The token is not fresh, please login again"
+        }), 401
     
     # Startup initialization (Flask 3 compatible)
     app.config.setdefault('APP_INITIALIZED', False)
