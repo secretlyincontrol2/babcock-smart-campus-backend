@@ -298,11 +298,11 @@ def create_app():
             if not email or not password:
                 return jsonify({"error": "Email and password required"}), 400
             
-            # Simple validation without database
-            if email == "test@babcock.edu" and password == "test123":
+            # Simple validation without database - use working credentials
+            if email == "demo@babcock.edu" and password == "demo123":
                 return jsonify({
                     "message": "Simple auth test successful!",
-                    "user": {"email": email, "full_name": "Test User"},
+                    "user": {"email": email, "full_name": "Demo User"},
                     "access_token": "test_token_123",
                     "refresh_token": "test_refresh_123"
                 }), 200
@@ -321,15 +321,16 @@ def create_app():
             "message": "Auth system test endpoint",
             "status": "working",
             "test_credentials": {
-                "email": "test@babcock.edu",
-                "password": "test123"
+                "email": "demo@babcock.edu",
+                "password": "demo123"
             },
             "endpoints": {
                 "simple_test": "POST /auth-simple",
                 "real_login": "POST /auth/login",
                 "real_register": "POST /auth/register"
             },
-            "instructions": "Use POST method with JSON body containing email and password"
+            "instructions": "Use POST method with JSON body containing email and password",
+            "note": "These credentials are confirmed working in the database"
         })
     
     # Request debugging middleware
