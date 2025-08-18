@@ -21,13 +21,23 @@ def safe_format_date(date_value):
     if not date_value:
         return None
     try:
-        if hasattr(date_value, 'isoformat'):
+        # Handle MongoDB ObjectId dates
+        if hasattr(date_value, 'generation_time'):
+            return date_value.generation_time.isoformat()
+        # Handle datetime objects
+        elif hasattr(date_value, 'isoformat'):
             return date_value.isoformat()
+        # Handle string dates
         elif isinstance(date_value, str):
             return date_value
+        # Handle other date-like objects
+        elif hasattr(date_value, 'strftime'):
+            return date_value.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+        # Fallback to string representation
         else:
             return str(date_value)
-    except Exception:
+    except Exception as e:
+        logger.warning(f"Date formatting failed for {date_value}: {e}")
         return str(date_value)
 
 auth_bp = Blueprint('auth', __name__)
@@ -49,7 +59,7 @@ def register():
         # Check if user already exists
         existing_user = db.users.find_one({"email": data['email']})
         if existing_user:
-            raise CustomHTTPException(400, "User with this email already exists")
+            raise CustomHTTPException(400, "An account with this email already exists")
         
         # Create user document with modern password hashing
         user_doc = {
@@ -107,7 +117,7 @@ def login():
         # Find user
         user = db.users.find_one({"email": data['email']})
         if not user:
-            raise CustomHTTPException(401, "Invalid credentials")
+            raise CustomHTTPException(401, "Email not found in our system")
         
         # Check password - handle both old and new hash methods
         try:
@@ -127,7 +137,7 @@ def login():
                 password_valid = False
         
         if not password_valid:
-            raise CustomHTTPException(401, "Invalid credentials")
+            raise CustomHTTPException(401, "Password is not correct")
         
         # If password is valid and using old hash method, migrate to new method
         if password_valid and not user['password_hash'].startswith('scrypt$'):
