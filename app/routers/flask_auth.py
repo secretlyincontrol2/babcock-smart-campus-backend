@@ -16,6 +16,20 @@ from ..core.exceptions import CustomHTTPException
 
 logger = logging.getLogger(__name__)
 
+def safe_format_date(date_value):
+    """Safely format date values to prevent format exceptions"""
+    if not date_value:
+        return None
+    try:
+        if hasattr(date_value, 'isoformat'):
+            return date_value.isoformat()
+        elif isinstance(date_value, str):
+            return date_value
+        else:
+            return str(date_value)
+    except Exception:
+        return str(date_value)
+
 auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/register', methods=['POST'])
@@ -244,8 +258,8 @@ def get_current_user():
             "department": user['department'],
             "level": user['level'],
             "is_active": user.get('is_active', True),
-            "created_at": user['created_at'].isoformat() if user.get('created_at') else None,
-            "updated_at": user['updated_at'].isoformat() if user.get('updated_at') else None
+            "created_at": safe_format_date(user.get('created_at')),
+            "updated_at": safe_format_date(user.get('updated_at'))
         })
         
     except CustomHTTPException:
